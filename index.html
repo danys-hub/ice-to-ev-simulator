@@ -7,6 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
   <style>
+    /* Full clean CSS from your original */
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     :root{--white:#fff;--gray-50:#f9fafb;--gray-100:#f3f4f6;--gray-200:#e5e7eb;--gray-300:#d1d5db;--gray-400:#9ca3af;--gray-500:#6b7280;--gray-600:#4b5563;--gray-700:#374151;--gray-800:#1f2937;--gray-900:#111827;--blue:#2563eb;--blue-lt:#eff6ff;--blue-md:#dbeafe;--green:#16a34a;--green-lt:#f0fdf4;--red:#dc2626;--amber:#d97706;--radius:10px;--radius-sm:6px;--shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.05)}
     body{font-family:'Inter',system-ui,sans-serif;background:var(--gray-50);color:var(--gray-800);font-size:13.5px;line-height:1.6}
@@ -14,9 +15,9 @@
     .brand{display:flex;align-items:center;gap:10px}
     .brand-icon{width:32px;height:32px;background:var(--blue);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;color:white}
     .brand-text h1{font-size:0.95rem;font-weight:600;color:var(--gray-900)}
-    .layout{display:grid;grid-template-columns:300px 1fr;min-height:calc(100vh - 56px);max-width:1400px;margin:0 auto}
-    aside{background:var(--white);border-right:1px solid var(--gray-200);overflow-y:auto;padding:16px}
-    .section{border-bottom:1px solid var(--gray-100);margin-bottom:12px}
+    .layout{display:grid;grid-template-columns:320px 1fr;min-height:calc(100vh - 56px);max-width:1400px;margin:0 auto}
+    aside{background:var(--white);border-right:1px solid var(--gray-200);overflow-y:auto}
+    .section{border-bottom:1px solid var(--gray-100)}
     .section-toggle{width:100%;display:flex;align-items:center;justify-content:space-between;padding:13px 16px;background:none;border:none;cursor:pointer;font-size:0.78rem;font-weight:600;color:var(--gray-700)}
     .section-body{display:none;padding:0 16px 14px}
     .section-body.open{display:block}
@@ -26,7 +27,7 @@
     .gen-btn{width:100%;padding:14px;background:#2563eb;color:white;border:none;border-radius:8px;font-weight:600;cursor:pointer;margin:20px 0}
     #chart-div{min-height:520px}
     table{width:100%;border-collapse:collapse}
-    th,td{padding:9px 16px;border-bottom:1px solid #e5e7eb;text-align:left}
+    th,td{padding:9px 16px;border-bottom:1px solid #e5e7eb}
     th{background:#f3f4f6;font-size:0.65rem}
     .pos{color:#16a34a}
     .neg{color:#dc2626}
@@ -44,58 +45,69 @@
 <div class="layout">
 
 <aside>
+  <!-- Current Mercedes -->
   <div class="section">
-    <button class="section-toggle open" onclick="this.nextElementSibling.classList.toggle('open')">Current Mercedes</button>
+    <button class="section-toggle open" onclick="this.nextElementSibling.classList.toggle('open')">Current Mercedes (Baseline)</button>
     <div class="section-body open">
       <div class="field"><label>Sale price today (€)</label><input id="S" type="number" value="5000"></div>
       <div class="field"><label>Annual running cost year 0 (€/yr)</label><input id="R_base" type="number" value="4522"></div>
     </div>
   </div>
 
+  <!-- Investment -->
   <div class="section">
     <button class="section-toggle open" onclick="this.nextElementSibling.classList.toggle('open')">Investment (QDVE)</button>
     <div class="section-body open">
-      <div class="field"><label>Gross return (%/yr)</label><input id="grossReturn" type="number" value="12" step="0.5"></div>
+      <div class="field"><label>Gross annual return (%)</label><input id="grossReturn" type="number" value="12" step="0.5"></div>
     </div>
   </div>
 
+  <!-- Charging & Purchase -->
   <div class="section">
-    <button class="section-toggle open" onclick="this.nextElementSibling.classList.toggle('open')">Charging & Purchase</button>
+    <button class="section-toggle open" onclick="this.nextElementSibling.classList.toggle('open')">Charging & Purchase Costs</button>
     <div class="section-body open">
       <div class="field"><label>Home charger + install (€)</label><input id="charger" type="number" value="1100"></div>
       <div class="field"><label>Registration / stamp duty (€)</label><input id="registration" type="number" value="200"></div>
-      <div class="field"><label>Public charging % of km</label><input id="publicPct" type="number" value="12"></div>
+      <div class="field"><label>Public charging (% of km)</label><input id="publicPct" type="number" value="12"></div>
       <div class="field"><label>Public rate (€/kWh)</label><input id="publicKwh" type="number" value="0.55"></div>
     </div>
   </div>
 
-  <button onclick="generate()" class="gen-btn">⚡ Generate Chart</button>
+  <!-- EVs to compare -->
+  <div class="section">
+    <button class="section-toggle open" onclick="this.nextElementSibling.classList.toggle('open')">Electric Vehicles to Compare</button>
+    <div class="section-body open" id="car-list"></div>
+  </div>
+
+  <button onclick="generate()" class="gen-btn">⚡ Generate / Update Chart</button>
 </aside>
 
 <main>
   <div id="chart-div"></div>
   <div id="summary-card" style="display:none;margin-top:20px">
-    <h3 style="margin-bottom:8px">Summary Table (Alt3 — Cash + Reinvest)</h3>
-    <table id="tbl-body"></table>
+    <h3>Summary Table — Alt3 (Cash + Reinvest savings)</h3>
+    <table id="tbl-body" style="width:100%;border-collapse:collapse"></table>
   </div>
 </main>
 
 </div>
 
 <script>
-// ====================== DATA (verified 2026 PT) ======================
+// ====================== CAR DATABASE (verified) ======================
 const CAR_DB = [
-  {name:"MG4 Standard 51kWh (LFP)",P:17700,fuel:470,iuc:60,insurance:650,maint:300,issues:210,residual10:5700,degrad:0.016},
-  {name:"MG4 Long Range 64kWh",P:19700,fuel:430,iuc:60,insurance:670,maint:300,issues:190,residual10:6500,degrad:0.016},
-  {name:"VW ID.3 58kWh",P:17200,fuel:490,iuc:60,insurance:580,maint:340,issues:220,residual10:6500,degrad:0.023},
-  {name:"VW ID.3 77kWh Pro S",P:21200,fuel:450,iuc:60,insurance:620,maint:340,issues:200,residual10:8300,degrad:0.023},
-  {name:"Tesla Model 3 LFP pre-Highland",P:24200,fuel:360,iuc:60,insurance:720,maint:280,issues:220,residual10:10900,degrad:0.016},
-  {name:"Nissan Leaf 40kWh",P:13700,fuel:550,iuc:60,insurance:560,maint:370,issues:420,residual10:3000,degrad:0.028},
-  {name:"Nissan Leaf 62kWh",P:16700,fuel:430,iuc:60,insurance:590,maint:350,issues:300,residual10:4200,degrad:0.028},
-  {name:"Renault Zoe R110/R135",P:10700,fuel:410,iuc:60,insurance:520,maint:300,issues:270,residual10:3000,degrad:0.025}
+  {id:0,name:"MG4 Standard 51kWh (LFP)",P:17700,fuel:470,iuc:60,insurance:650,maint:300,issues:210,residual10:5700,degrad:0.016},
+  {id:1,name:"MG4 Long Range 64kWh",P:19700,fuel:430,iuc:60,insurance:670,maint:300,issues:190,residual10:6500,degrad:0.016},
+  {id:2,name:"VW ID.3 58kWh",P:17200,fuel:490,iuc:60,insurance:580,maint:340,issues:220,residual10:6500,degrad:0.023},
+  {id:3,name:"VW ID.3 77kWh Pro S",P:21200,fuel:450,iuc:60,insurance:620,maint:340,issues:200,residual10:8300,degrad:0.023},
+  {id:4,name:"Tesla Model 3 LFP pre-Highland",P:24200,fuel:360,iuc:60,insurance:720,maint:280,issues:220,residual10:10900,degrad:0.016},
+  {id:5,name:"Nissan Leaf 40kWh",P:13700,fuel:550,iuc:60,insurance:560,maint:370,issues:420,residual10:3000,degrad:0.028},
+  {id:6,name:"Nissan Leaf 62kWh",P:16700,fuel:430,iuc:60,insurance:590,maint:350,issues:300,residual10:4200,degrad:0.028},
+  {id:7,name:"Renault Zoe R110/R135",P:10700,fuel:410,iuc:60,insurance:520,maint:300,issues:270,residual10:3000,degrad:0.025}
 ];
 
-// ====================== MODEL (fixed) ======================
+let selectedCars = new Set([0,2,4,7]); // default selection
+
+// ====================== MODEL ======================
 function residualAtYear(P, r10, t) {
   if (t === 0) return P;
   return P - (P - r10) * Math.pow(t / 10, 1.6);
@@ -122,32 +134,50 @@ function simulateCar(car, params) {
     resDelta.push(residualAtYear(P, car.residual10, t) - residualAtYear(S, mercRes10, t));
   }
 
-  // Alt3 — Cash + reinvest savings (the realistic case)
+  // Alt3 — Cash + reinvest savings (the realistic scenario)
   const alt3 = new Array(11).fill(0);
-  let q = -D;                     // upfront QDVE withdrawal
+  let q = -D;   // upfront QDVE withdrawal
   alt3[0] = Math.round(q + resDelta[0]);
   for (let t = 1; t <= 10; t++) {
     q = q * (1 + grossReturn) + savings[t];
     let nw = q + resDelta[t];
-    if (t === 10) nw -= Math.max(0, q + D) * CGT;   // CGT on gain only at redemption
+    if (t === 10) nw -= Math.max(0, q + D) * CGT;
     alt3[t] = Math.round(nw);
   }
   return alt3;
 }
 
-// ====================== GENERATE ======================
+// ====================== RENDER CAR LIST ======================
+function renderCarList() {
+  const container = document.getElementById('car-list');
+  container.innerHTML = CAR_DB.map(car => {
+    const checked = selectedCars.has(car.id) ? 'checked' : '';
+    return `
+      <label style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #e5e7eb;cursor:pointer">
+        <input type="checkbox" ${checked} onchange="toggleCar(${car.id}, this.checked)">
+        <span>${car.name}</span>
+      </label>`;
+  }).join('');
+}
+
+function toggleCar(id, checked) {
+  if (checked) selectedCars.add(id);
+  else selectedCars.delete(id);
+}
+
+// ====================== GENERATE (now reads all inputs) ======================
 function generate() {
   const params = {
     S: parseFloat(document.getElementById('S').value) || 5000,
     R_base: parseFloat(document.getElementById('R_base').value) || 4522,
     mercRes10: 1200,
-    charger: 1100,
-    registration: 200,
+    charger: parseFloat(document.getElementById('charger').value) || 1100,
+    registration: parseFloat(document.getElementById('registration').value) || 200,
     inflation: 0.022,
-    publicPct: 0.12,
-    publicKwh: 0.55,
+    publicPct: parseFloat(document.getElementById('publicPct').value) / 100 || 0.12,
+    publicKwh: parseFloat(document.getElementById('publicKwh').value) || 0.55,
     homeRate: 0.16,
-    grossReturn: parseFloat(document.getElementById('grossReturn').value)/100 || 0.12,
+    grossReturn: parseFloat(document.getElementById('grossReturn').value) / 100 || 0.12,
     CGT: 0.28
   };
 
@@ -161,13 +191,15 @@ function generate() {
     line: {color: '#6b7280', dash: 'dash', width: 4}
   });
 
-  CAR_DB.forEach((car, i) => {
-    const color = ['#2563eb','#10b981','#dc2626','#d97706','#7c3aed'][i % 5];
+  Array.from(selectedCars).forEach(id => {
+    const car = CAR_DB.find(c => c.id === id);
+    if (!car) return;
+    const color = ['#2563eb','#10b981','#dc2626','#d97706','#7c3aed'][id % 5];
     const alt3 = simulateCar(car, params);
     traces.push({
       x: YEARS,
       y: alt3,
-      name: car.name + " — Alt3 (Cash + Reinvest)",
+      name: car.name,
       line: {color: color, dash: 'dashdot', width: 2.5}
     });
   });
@@ -180,25 +212,29 @@ function generate() {
     height: 520
   }, {responsive: true});
 
-  // Simple summary table
+  // Summary table
   const tbody = document.getElementById('tbl-body');
-  tbody.innerHTML = CAR_DB.map(car => {
+  tbody.innerHTML = Array.from(selectedCars).map(id => {
+    const car = CAR_DB.find(c => c.id === id);
     const alt3 = simulateCar(car, params);
     const delta10 = alt3[10];
-    const sign = delta10 >= 0 ? 'pos' : 'neg';
+    const beYear = alt3.findIndex(v => v > 0);
     return `<tr>
       <td>${car.name}</td>
       <td>Alt3</td>
-      <td>${delta10 > 0 ? 'Year ' + (alt3.findIndex(v => v > 0) || '—') : 'Never'}</td>
-      <td class="${sign}">${delta10 >= 0 ? '+' : ''}€${Math.round(delta10).toLocaleString('pt-PT')}</td>
+      <td>${beYear > 0 ? 'Year '+beYear : 'Never'}</td>
+      <td class="${delta10>=0?'pos':'neg'}">${delta10>=0?'+' : ''}€${Math.round(delta10).toLocaleString('pt-PT')}</td>
     </tr>`;
   }).join('');
 
   document.getElementById('summary-card').style.display = 'block';
 }
 
-// Auto-run on load
-window.onload = generate;
+// ====================== INIT ======================
+window.onload = () => {
+  renderCarList();
+  generate();   // initial chart
+};
 </script>
 </body>
 </html>
