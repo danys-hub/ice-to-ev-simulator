@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>EV vs Mercedes — Portugal 2026 (Accurate Data)</title>
+  <title>EV vs Mercedes — Portugal 2026</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
   <style>
@@ -85,7 +85,18 @@
 
   <div id="summary-card" style="display:none;margin-top:20px">
     <h3>Summary Table — Alt3 (Cash + Reinvest)</h3>
-    <table id="tbl-body" style="width:100%;border-collapse:collapse"></table>
+    <table id="tbl-body" style="width:100%;border-collapse:collapse">
+      <thead>
+        <tr>
+          <th onclick="sortTable(0)">Car</th>
+          <th onclick="sortTable(1)">Scenario</th>
+          <th onclick="sortTable(2)">Breakeven Year</th>
+          <th onclick="sortTable(3)">Year 5 Delta</th>
+          <th onclick="sortTable(4)">Year 10 Delta</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
   </div>
 </main>
 
@@ -94,16 +105,16 @@
 <button onclick="generate()" class="gen-btn">⚡ Generate / Update Chart</button>
 
 <script>
-// ====================== ACCURATE 2026 PORTUGAL DATA (IUC = 0 € for all EVs) ======================
+// ====================== ACCURATE 2026 PORTUGAL DATA ======================
 const CAR_DB = [
   {id:0,name:"MG4 Standard 51kWh (LFP)",P:17200,fuel:470,iuc:0,insurance:550,maint:300,issues:210,residual10:5700,degrad:0.016,
-   details:"Cheapest: €14 850 (AutoScout24 NL) + €1 200 import/registration = €17 200 landed PT. Source: AutoScout24 Apr 2026"},
+   details:"Cheapest landed: €14 850 (AutoScout24 NL) + €1 200 import/registration = €17 200. Source: AutoScout24 Apr 2026"},
   {id:1,name:"MG4 Long Range 64kWh",P:20200,fuel:430,iuc:0,insurance:570,maint:300,issues:190,residual10:6500,degrad:0.016,
-   details:"Cheapest: €18 637 (AutoScout24) + €1 200 import = €20 200 landed PT. Source: AutoScout24 Apr 2026"},
+   details:"Cheapest landed: €18 637 (AutoScout24) + €1 200 import = €20 200. Source: AutoScout24 Apr 2026"},
   {id:2,name:"VW ID.3 58kWh (2021–26)",P:24000,fuel:490,iuc:0,insurance:600,maint:340,issues:220,residual10:6500,degrad:0.023,
-   details:"Cheapest local PT low-km: €24 000. Source: Standvirtual Apr 2026"},
+   details:"Cheapest local PT: €24 000. Source: Standvirtual Apr 2026"},
   {id:3,name:"VW ID.3 77kWh Pro S",P:26000,fuel:450,iuc:0,insurance:620,maint:340,issues:200,residual10:8300,degrad:0.023,
-   details:"Cheapest: €26 000 (mix AutoScout24/Standvirtual). Source: AutoScout24 Apr 2026"},
+   details:"Cheapest: €26 000 (AutoScout24/Standvirtual). Source: AutoScout24 Apr 2026"},
   {id:4,name:"Tesla Model 3 LFP pre-Highland",P:32000,fuel:360,iuc:0,insurance:720,maint:280,issues:220,residual10:10900,degrad:0.016,
    details:"Cheapest PT: €32 000. Source: Standvirtual Apr 2026"},
   {id:5,name:"Nissan Leaf 40kWh",P:12000,fuel:550,iuc:0,insurance:520,maint:370,issues:420,residual10:3000,degrad:0.028,
@@ -116,7 +127,7 @@ const CAR_DB = [
 
 let selectedCars = new Set([0,2,4,7]);
 
-// ====================== MODEL (unchanged, correct) ======================
+// ====================== MODEL ======================
 function residualAtYear(P, r10, t) {
   if (t === 0) return P;
   return P - (P - r10) * Math.pow(t / 10, 1.6);
@@ -154,7 +165,7 @@ function simulateCar(car, params) {
   return alt3;
 }
 
-// ====================== RENDER CAR LIST WITH DETAILED ISSUES ======================
+// ====================== RENDER CAR LIST WITH FULL COST BREAKDOWN ======================
 function renderCarList() {
   const container = document.getElementById('car-list');
   container.innerHTML = CAR_DB.map(car => {
@@ -168,13 +179,18 @@ function renderCarList() {
         </label>
         <button onclick="toggleDetails(${car.id});event.stopImmediatePropagation()" style="margin-left:28px;font-size:0.7rem;color:#2563eb;background:none;border:none;cursor:pointer">Details ▼</button>
         <div id="detail-${car.id}" class="car-detail" style="display:none">
+          <strong>Purchase price (landed PT): €${car.P}</strong><br>
           ${car.details}<br><br>
-          <strong>12V LFP battery replacement: €200 (common fix for drain)</strong><br><br>
-          <strong>Common Portugal issues & repair costs:</strong><br>
-          • 12V battery drain (all EVs) — €200 LFP upgrade<br>
-          • Suspension clunk on Portuguese roads — €400–600<br>
-          • Minor electronics/software — OTA or €150–300<br>
-          <em>(MG4/ID.3/Tesla most affected by 12V; Leaf/Zoe have higher degradation risk)</em>
+          <strong>Annual costs breakdown (year 0):</strong><br>
+          • Fuel/Electricity: €${car.fuel}<br>
+          • IUC: €${car.iuc} (0 € for all EVs)<br>
+          • Insurance: €${car.insurance}<br>
+          • Maintenance: €${car.maint}<br>
+          • Known issues/repairs: €${car.issues}<br>
+          • 12V LFP battery replacement (recommended): €200<br>
+          • Total running cost: €${totalRun}/yr<br><br>
+          <strong>Residual value yr10: €${car.residual10}</strong><br>
+          <strong>Battery degradation: ${(car.degrad*100).toFixed(1)}%/yr</strong>
         </div>
       </div>`;
   }).join('');
@@ -227,6 +243,7 @@ function generate() {
     height: 520
   }, {responsive: true});
 
+  // Sortable summary table
   const tbody = document.getElementById('tbl-body');
   tbody.innerHTML = Array.from(selectedCars).map(id => {
     const car = CAR_DB.find(c => c.id === id);
@@ -237,13 +254,28 @@ function generate() {
       <td>${car.name}</td>
       <td>Alt3</td>
       <td>${beYear > 0 ? 'Year '+beYear : 'Never'}</td>
+      <td class="${delta10>=0?'pos':'neg'}">${delta10>=0?'+' : ''}€${Math.round(alt3[5]).toLocaleString('pt-PT')}</td>
       <td class="${delta10>=0?'pos':'neg'}">${delta10>=0?'+' : ''}€${Math.round(delta10).toLocaleString('pt-PT')}</td>
     </tr>`;
   }).join('');
 
   document.getElementById('summary-card').style.display = 'block';
-};
+}
 
+// Sort table function
+function sortTable(n) {
+  const table = document.getElementById('tbl-body');
+  const rows = Array.from(table.rows);
+  rows.sort((a, b) => {
+    let valA = a.cells[n].textContent.replace(/[^0-9.-]/g, '');
+    let valB = b.cells[n].textContent.replace(/[^0-9.-]/g, '');
+    return parseFloat(valA) - parseFloat(valB);
+  });
+  table.innerHTML = '';
+  rows.forEach(row => table.appendChild(row));
+}
+
+// Init
 window.onload = () => {
   renderCarList();
   generate();
