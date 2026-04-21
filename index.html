@@ -16,7 +16,7 @@
     <div class="flex justify-between items-center mb-8">
       <div>
         <h1 class="text-4xl font-semibold text-gray-900">🚗 EV vs Mercedes + QDVE</h1>
-        <p class="text-gray-600 mt-1">Simulação 10 anos – breakeven exato • Portugal</p>
+        <p class="text-gray-600 mt-1">Simulação completa 10 anos – breakeven exato • Portugal</p>
       </div>
       <a href="https://github.com/teu-utilizador/ev-vs-mercedes-qdve" target="_blank"
          class="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1">
@@ -29,17 +29,17 @@
       <div class="lg:col-span-4 bg-white rounded-3xl shadow p-8">
         <h2 class="font-semibold text-lg mb-6">Parâmetros</h2>
 
-        <!-- Carros -->
+        <!-- Carros – AGORA COM TODOS OS MODELOS (inclui Mercedes como opção) -->
         <div class="mb-8">
-          <p class="text-sm font-medium text-gray-500 mb-3">Carros a comparar (baseline = Mercedes)</p>
-          <div id="car-list" class="space-y-2"></div>
+          <p class="text-sm font-medium text-gray-500 mb-3">Carros a comparar<br><span class="text-xs text-gray-400">(Mercedes = baseline – linha zero)</span></p>
+          <div id="car-list" class="space-y-2 max-h-96 overflow-y-auto pr-2"></div>
         </div>
 
         <!-- Investimento -->
         <div class="mb-8">
           <label class="block text-sm font-medium text-gray-500 mb-2">Investimento do prémio EV</label>
           <select id="inv-type" onchange="toggleInvestment()" class="w-full border border-gray-300 rounded-2xl px-4 py-3 text-sm">
-            <option value="qdve">QDVE (default)</option>
+            <option value="qdve" selected>QDVE (default)</option>
             <option value="other">Outro investimento</option>
           </select>
           <div id="qdve-options" class="mt-4">
@@ -117,7 +117,7 @@
   </div>
 
   <script>
-    // ==================== DADOS BASE (exatamente os mesmos do Streamlit) ====================
+    // ==================== DADOS BASE – AGORA COM TODOS OS MODELOS ====================
     const baseline = {
       name: "Mercedes C-Class (Baseline)",
       running_costs: Array.from({length:15}, (_,i) => Math.round(4522 * Math.pow(1.02, i))),
@@ -127,6 +127,7 @@
     };
 
     const cars = {
+      "Mercedes C-Class (Baseline)": baseline,   // ← agora também selecionável (linha zero)
       "Tesla Model Y": {
         running_costs: Array.from({length:15}, (_,i) => Math.round(1690 * Math.pow(1.02, i))),
         residuals:     Array.from({length:15}, (_,i) => Math.round(52000 - i*2800)),
@@ -144,30 +145,71 @@
         residuals:     Array.from({length:15}, (_,i) => Math.round(48000 - i*2700)),
         annual_loan_pmt: 3700,
         initial_withdrawal: 7000
+      },
+      "Renault Megane E-Tech": {
+        running_costs: Array.from({length:15}, (_,i) => Math.round(1620 * Math.pow(1.02, i))),
+        residuals:     Array.from({length:15}, (_,i) => Math.round(38000 - i*2400)),
+        annual_loan_pmt: 3400,
+        initial_withdrawal: 5500
+      },
+      "Peugeot e-208": {
+        running_costs: Array.from({length:15}, (_,i) => Math.round(1480 * Math.pow(1.02, i))),
+        residuals:     Array.from({length:15}, (_,i) => Math.round(26500 - i*2100)),
+        annual_loan_pmt: 2900,
+        initial_withdrawal: 4200
+      },
+      "Skoda Enyaq": {
+        running_costs: Array.from({length:15}, (_,i) => Math.round(1780 * Math.pow(1.02, i))),
+        residuals:     Array.from({length:15}, (_,i) => Math.round(46000 - i*2650)),
+        annual_loan_pmt: 3750,
+        initial_withdrawal: 7200
+      },
+      "BYD Atto 3": {
+        running_costs: Array.from({length:15}, (_,i) => Math.round(1580 * Math.pow(1.02, i))),
+        residuals:     Array.from({length:15}, (_,i) => Math.round(41000 - i*2550)),
+        annual_loan_pmt: 3550,
+        initial_withdrawal: 6300
+      },
+      "Cupra Born": {
+        running_costs: Array.from({length:15}, (_,i) => Math.round(1710 * Math.pow(1.02, i))),
+        residuals:     Array.from({length:15}, (_,i) => Math.round(43500 - i*2500)),
+        annual_loan_pmt: 3650,
+        initial_withdrawal: 6800
+      },
+      "Fiat 600e": {
+        running_costs: Array.from({length:15}, (_,i) => Math.round(1550 * Math.pow(1.02, i))),
+        residuals:     Array.from({length:15}, (_,i) => Math.round(29500 - i*2200)),
+        annual_loan_pmt: 3100,
+        initial_withdrawal: 4800
+      },
+      "Citroën ë-C4": {
+        running_costs: Array.from({length:15}, (_,i) => Math.round(1600 * Math.pow(1.02, i))),
+        residuals:     Array.from({length:15}, (_,i) => Math.round(34500 - i*2300)),
+        annual_loan_pmt: 3300,
+        initial_withdrawal: 5200
       }
     };
 
     let chartInstance = null;
 
-    // ==================== RENDER CAR CHECKBOXES ====================
+    // ==================== RENDER CAR CHECKBOXES (agora com todos) ====================
     function renderCarList() {
       const container = document.getElementById("car-list");
       container.innerHTML = Object.keys(cars).map(name => `
-        <label class="flex items-center gap-3 cursor-pointer">
+        <label class="flex items-center gap-3 cursor-pointer hover:bg-gray-50 p-2 rounded-2xl">
           <input type="checkbox" value="${name}" class="car-checkbox w-5 h-5 accent-blue-600">
           <span class="text-gray-700">${name}</span>
         </label>
       `).join("");
     }
 
-    // ==================== TOGGLE INVESTMENT TYPE ====================
     function toggleInvestment() {
       const isQdve = document.getElementById("inv-type").value === "qdve";
       document.getElementById("qdve-options").classList.toggle("hidden", !isQdve);
       document.getElementById("other-rate").classList.toggle("hidden", isQdve);
     }
 
-    // ==================== SIMULATION LOGIC (idêntica à versão corrigida) ====================
+    // ==================== SIMULATION LOGIC (corrigida e idêntica à versão Python) ====================
     function simulateCar(carName, years, qdveRate, applyCgt, cgtRate, rBaseAdj, fuelAdj) {
       const car = cars[carName];
       const merFuelAdj = baseline.fuel_costs.slice(0, years).map(v => v * fuelAdj);
@@ -181,7 +223,7 @@
 
       for (let t = 0; t < years; t++) {
         const savings = adjMerRunning[t] - car.running_costs[t];
-        const netCf = savings - car.annual_loan_pmt;
+        const netCf = savings - (car.annual_loan_pmt || 0);
 
         qdve += netCf;
         qdve *= (1 + qdveRate);
@@ -196,13 +238,12 @@
       // CGT só no último ano
       let finalPortfolio = portfolio[portfolio.length - 1];
       if (applyCgt && finalPortfolio > 0) {
-        const gain = finalPortfolio - car.initial_withdrawal;
+        const gain = finalPortfolio - (car.initial_withdrawal || 0);
         const cgtAmount = Math.max(0, gain) * cgtRate;
         finalPortfolio -= cgtAmount;
         nwDelta[nwDelta.length - 1] = Math.round(finalPortfolio + residualDeltaSeries[residualDeltaSeries.length - 1]);
       }
 
-      // Breakeven
       let breakeven = null;
       for (let i = 0; i < nwDelta.length; i++) {
         if (nwDelta[i] >= 0) {
@@ -219,7 +260,6 @@
       };
     }
 
-    // ==================== RUN SIMULATION ====================
     function runSimulation() {
       const selected = Array.from(document.querySelectorAll(".car-checkbox:checked")).map(cb => cb.value);
       if (selected.length === 0) {
@@ -239,7 +279,6 @@
 
       const results = selected.map(car => simulateCar(car, years, rate, applyCgt, 0.28, rBaseAdj, fuelAdj));
 
-      // Mostrar resultados
       document.getElementById("empty-state").classList.add("hidden");
       document.getElementById("results").classList.remove("hidden");
 
@@ -254,7 +293,7 @@
           datasets: results.map((r, i) => ({
             label: r.name,
             data: r.nwDelta,
-            borderColor: `hsl(${i * 80}, 80%, 60%)`,
+            borderColor: `hsl(${i * 35}, 85%, 55%)`,
             tension: 0.3,
             borderWidth: 3,
             pointRadius: 4
@@ -293,16 +332,13 @@
         </tbody>
       `;
 
-      // Guardar resultados para download
       window.lastResults = { results, years, selected };
     }
 
-    // ==================== DOWNLOAD CSV ====================
     function downloadCSV() {
       if (!window.lastResults) return;
       const { results, years } = window.lastResults;
-      
-      let csv = "Ano," + results.map(r => r.name).join(",") + "\n";
+      let csv = "Ano," + results.map(r => `"${r.name}"`).join(",") + "\n";
       for (let y = 0; y < years; y++) {
         csv += (y + 1) + "," + results.map(r => r.nwDelta[y]).join(",") + "\n";
       }
@@ -314,7 +350,6 @@
       a.click();
     }
 
-    // ==================== INIT ====================
     function init() {
       renderCarList();
       document.getElementById("years").addEventListener("input", e => {
@@ -326,10 +361,15 @@
       document.getElementById("fuel").addEventListener("input", e => {
         document.getElementById("fuel-value").textContent = e.target.value + "%";
       });
-      // Selecionar por defeito os 3 carros
+      
+      // Selecionar por defeito todos exceto Mercedes (mas Mercedes está disponível)
       setTimeout(() => {
         const checkboxes = document.querySelectorAll(".car-checkbox");
-        checkboxes.forEach(cb => { if (["Tesla Model Y","VW ID.3","Hyundai Ioniq 5"].includes(cb.value)) cb.checked = true; });
+        checkboxes.forEach(cb => {
+          if (["Tesla Model Y","VW ID.3","Hyundai Ioniq 5","Renault Megane E-Tech","Skoda Enyaq"].includes(cb.value)) {
+            cb.checked = true;
+          }
+        });
       }, 100);
     }
     window.onload = init;
