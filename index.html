@@ -272,7 +272,9 @@ function generate() {
     charger: parseFloat(document.getElementById('charger').value) || 1100,
     registration: parseFloat(document.getElementById('registration').value) || 200,
     inflation: 0.022,
-    publicPct: parseFloat(document.getElementById('publicPct').value) / 100 || 0.12,
+    publicPct: document.getElementById('publicType').value === 'percent'
+  ? (parseFloat(document.getElementById('publicAmount').value) || 12) / 100
+  : (parseFloat(document.getElementById('publicAmount').value) || 1500) / mileage,,
     publicKwh: parseFloat(document.getElementById('publicKwh').value) || 0.55,
     homeRate: 0.16,
     grossReturn: parseFloat(document.getElementById('grossReturn').value) / 100 || 0.12,
