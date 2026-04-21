@@ -30,7 +30,7 @@
     th{background:#f3f4f6;font-size:0.65rem}
     .pos{color:#16a34a}
     .neg{color:#dc2626}
-    .car-detail{background:#f9fafb;padding:10px;border-top:1px solid #e5e7eb}
+    .car-detail{background:#f9fafb;padding:12px;border-top:1px solid #e5e7eb;font-size:0.75rem}
   </style>
 </head>
 <body>
@@ -91,20 +91,27 @@
 
 </div>
 
-<!-- Sticky Generate Button -->
 <button onclick="generate()" class="gen-btn">⚡ Generate / Update Chart</button>
 
 <script>
-// ====================== CAR DATABASE ======================
+// ====================== UPDATED CAR DATABASE (real April 2026 PT data) ======================
 const CAR_DB = [
-  {id:0,name:"MG4 Standard 51kWh (LFP)",P:17700,fuel:470,iuc:60,insurance:650,maint:300,issues:210,residual10:5700,degrad:0.016},
-  {id:1,name:"MG4 Long Range 64kWh",P:19700,fuel:430,iuc:60,insurance:670,maint:300,issues:190,residual10:6500,degrad:0.016},
-  {id:2,name:"VW ID.3 58kWh",P:17200,fuel:490,iuc:60,insurance:580,maint:340,issues:220,residual10:6500,degrad:0.023},
-  {id:3,name:"VW ID.3 77kWh Pro S",P:21200,fuel:450,iuc:60,insurance:620,maint:340,issues:200,residual10:8300,degrad:0.023},
-  {id:4,name:"Tesla Model 3 LFP pre-Highland",P:24200,fuel:360,iuc:60,insurance:720,maint:280,issues:220,residual10:10900,degrad:0.016},
-  {id:5,name:"Nissan Leaf 40kWh",P:13700,fuel:550,iuc:60,insurance:560,maint:370,issues:420,residual10:3000,degrad:0.028},
-  {id:6,name:"Nissan Leaf 62kWh",P:16700,fuel:430,iuc:60,insurance:590,maint:350,issues:300,residual10:4200,degrad:0.028},
-  {id:7,name:"Renault Zoe R110/R135",P:10700,fuel:410,iuc:60,insurance:520,maint:300,issues:270,residual10:3000,degrad:0.025}
+  {id:0,name:"MG4 Standard 51kWh (LFP)",P:17200,fuel:470,iuc:60,insurance:650,maint:300,issues:210,residual10:5700,degrad:0.016,
+   details:"Cheapest: €14 850 (AutoScout24 NL) + €1 200 import = €17 200 landed PT. Source: AutoScout24 Apr 2026"},
+  {id:1,name:"MG4 Long Range 64kWh",P:20200,fuel:430,iuc:60,insurance:670,maint:300,issues:190,residual10:6500,degrad:0.016,
+   details:"Cheapest: €18 637 (AutoScout24) + €1 200 import = €20 200 landed PT. Source: AutoScout24 Apr 2026"},
+  {id:2,name:"VW ID.3 58kWh (2021–26)",P:24000,fuel:490,iuc:60,insurance:580,maint:340,issues:220,residual10:6500,degrad:0.023,
+   details:"Cheapest local PT: €24 000 (Standvirtual low-km examples). Source: Standvirtual Apr 2026"},
+  {id:3,name:"VW ID.3 77kWh Pro S",P:26000,fuel:450,iuc:60,insurance:620,maint:340,issues:200,residual10:8300,degrad:0.023,
+   details:"Cheapest: €26 000 (AutoScout24/Standvirtual mix). Source: AutoScout24 Apr 2026"},
+  {id:4,name:"Tesla Model 3 LFP pre-Highland",P:32000,fuel:360,iuc:60,insurance:720,maint:280,issues:220,residual10:10900,degrad:0.016,
+   details:"Cheapest: €32 000 (Standvirtual PT). Source: Standvirtual Apr 2026"},
+  {id:5,name:"Nissan Leaf 40kWh",P:12000,fuel:550,iuc:60,insurance:560,maint:370,issues:420,residual10:3000,degrad:0.028,
+   details:"Cheapest: €12 000 (Standvirtual/OLX PT). Source: Standvirtual Apr 2026"},
+  {id:6,name:"Nissan Leaf 62kWh",P:13500,fuel:430,iuc:60,insurance:590,maint:350,issues:300,residual10:4200,degrad:0.028,
+   details:"Cheapest: €13 500 (Standvirtual PT). Source: Standvirtual Apr 2026"},
+  {id:7,name:"Renault Zoe R110/R135",P:10000,fuel:410,iuc:60,insurance:520,maint:300,issues:270,residual10:3000,degrad:0.025,
+   details:"Cheapest: €10 000 (Standvirtual/OLX PT). Source: Standvirtual Apr 2026"}
 ];
 
 let selectedCars = new Set([0,2,4,7]);
@@ -136,8 +143,8 @@ function simulateCar(car, params) {
   }
 
   const alt3 = new Array(11).fill(0);
-  let q = -D;   // upfront QDVE withdrawal
-  alt3[0] = 0;  // year 0 = purchase moment (delta starts at 0)
+  let q = -D;
+  alt3[0] = 0;
   for (let t = 1; t <= 10; t++) {
     q = q * (1 + grossReturn) + savings[t];
     let nw = q + resDelta[t];
@@ -154,20 +161,15 @@ function renderCarList() {
     const checked = selectedCars.has(car.id) ? 'checked' : '';
     const totalRun = car.fuel + car.iuc + car.insurance + car.maint + car.issues;
     return `
-      <div style="margin-bottom:8px">
+      <div style="margin-bottom:12px;border-bottom:1px solid #e5e7eb;padding-bottom:8px">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
           <input type="checkbox" ${checked} onchange="toggleCar(${car.id}, this.checked)">
           <span>${car.name}</span>
         </label>
-        <button onclick="toggleDetails(${car.id});event.stopImmediatePropagation()" style="margin-left:24px;font-size:0.7rem;color:#2563eb;background:none;border:none;cursor:pointer">Details ▼</button>
+        <button onclick="toggleDetails(${car.id});event.stopImmediatePropagation()" style="margin-left:28px;font-size:0.7rem;color:#2563eb;background:none;border:none;cursor:pointer">Details ▼</button>
         <div id="detail-${car.id}" class="car-detail" style="display:none">
-          <strong>Purchase: €${car.P}</strong><br>
-          Fuel/elec: €${car.fuel}<br>
-          IUC: €${car.iuc} | Insurance: €${car.insurance}<br>
-          Maintenance: €${car.maint} | Issues: €${car.issues}<br>
-          Total running: €${totalRun}/yr<br>
-          Residual yr10: €${car.residual10}<br>
-          Degradation: ${(car.degrad*100).toFixed(1)}%/yr
+          ${car.details}<br><br>
+          <strong>12V LFP battery replacement: €200</strong>
         </div>
       </div>`;
   }).join('');
@@ -220,7 +222,6 @@ function generate() {
     height: 520
   }, {responsive: true});
 
-  // Sortable summary table
   const tbody = document.getElementById('tbl-body');
   tbody.innerHTML = Array.from(selectedCars).map(id => {
     const car = CAR_DB.find(c => c.id === id);
@@ -235,24 +236,8 @@ function generate() {
     </tr>`;
   }).join('');
 
-  // Make table sortable
-  const table = tbody.parentNode;
-  table.querySelectorAll('th').forEach((th, i) => {
-    th.style.cursor = 'pointer';
-    th.onclick = () => {
-      const rows = Array.from(tbody.rows);
-      rows.sort((a, b) => {
-        const valA = a.cells[i].textContent.replace(/[^0-9.-]/g, '');
-        const valB = b.cells[i].textContent.replace(/[^0-9.-]/g, '');
-        return parseFloat(valA) - parseFloat(valB);
-      });
-      tbody.innerHTML = '';
-      rows.forEach(row => tbody.appendChild(row));
-    };
-  });
-
   document.getElementById('summary-card').style.display = 'block';
-}
+};
 
 // Init
 window.onload = () => {
