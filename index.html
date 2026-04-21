@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>EV vs Mercedes — Portugal 2026</title>
+  <title>EV vs Mercedes — Portugal 2026 (Accurate Data)</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
   <style>
@@ -45,9 +45,9 @@
 <div class="layout">
 
 <aside>
-  <!-- Current Vehicle -->
+  <!-- Current Mercedes -->
   <div class="section">
-    <button class="section-toggle open" onclick="this.nextElementSibling.classList.toggle('open')">Current Vehicle (Baseline)</button>
+    <button class="section-toggle open" onclick="this.nextElementSibling.classList.toggle('open')">Current Mercedes (Baseline)</button>
     <div class="section-body open">
       <div class="field"><label>Sale price today (€)</label><input id="S" type="number" value="5000"></div>
       <div class="field"><label>Annual running cost year 0 (€/yr)</label><input id="R_base" type="number" value="4522"></div>
@@ -105,27 +105,35 @@
 <button onclick="generate()" class="gen-btn">⚡ Generate / Update Chart</button>
 
 <script>
-// ====================== ACCURATE 2026 PORTUGAL DATA ======================
+// ====================== FULL ACCURATE 2026 PORTUGAL DATA (IUC = 0 €) ======================
 const CAR_DB = [
   {id:0,name:"MG4 Standard 51kWh (LFP)",P:17200,fuel:470,iuc:0,insurance:550,maint:300,issues:210,residual10:5700,degrad:0.016,
-   details:"Cheapest landed: €14 850 (AutoScout24 NL) + €1 200 import/registration = €17 200. Source: AutoScout24 Apr 2026"},
+   details:"Cheapest landed: €14 850 (AutoScout24 NL) + €1 200 import = €17 200. Source: AutoScout24 Apr 2026<br><br>Common PT issues: suspension clunk on bad roads (€400–600), 12V drain"},
   {id:1,name:"MG4 Long Range 64kWh",P:20200,fuel:430,iuc:0,insurance:570,maint:300,issues:190,residual10:6500,degrad:0.016,
-   details:"Cheapest landed: €18 637 (AutoScout24) + €1 200 import = €20 200. Source: AutoScout24 Apr 2026"},
-  {id:2,name:"VW ID.3 58kWh (2021–26)",P:24000,fuel:490,iuc:0,insurance:600,maint:340,issues:220,residual10:6500,degrad:0.023,
-   details:"Cheapest local PT: €24 000. Source: Standvirtual Apr 2026"},
+   details:"Cheapest landed: €18 637 (AutoScout24) + €1 200 = €20 200. Source: AutoScout24 Apr 2026"},
+  {id:2,name:"VW ID.3 58kWh",P:24000,fuel:490,iuc:0,insurance:600,maint:340,issues:220,residual10:6500,degrad:0.023,
+   details:"Cheapest local: €24 000 (Standvirtual). Source: Standvirtual Apr 2026<br>Common issues: software/heat-pump (€800 out of warranty)"},
   {id:3,name:"VW ID.3 77kWh Pro S",P:26000,fuel:450,iuc:0,insurance:620,maint:340,issues:200,residual10:8300,degrad:0.023,
-   details:"Cheapest: €26 000 (AutoScout24/Standvirtual). Source: AutoScout24 Apr 2026"},
+   details:"Cheapest: €26 000. Source: AutoScout24 Apr 2026"},
   {id:4,name:"Tesla Model 3 LFP pre-Highland",P:32000,fuel:360,iuc:0,insurance:720,maint:280,issues:220,residual10:10900,degrad:0.016,
    details:"Cheapest PT: €32 000. Source: Standvirtual Apr 2026"},
-  {id:5,name:"Nissan Leaf 40kWh",P:12000,fuel:550,iuc:0,insurance:520,maint:370,issues:420,residual10:3000,degrad:0.028,
-   details:"Cheapest: €12 000 (Standvirtual/OLX PT). Source: Standvirtual Apr 2026"},
-  {id:6,name:"Nissan Leaf 62kWh",P:13500,fuel:430,iuc:0,insurance:540,maint:350,issues:300,residual10:4200,degrad:0.028,
-   details:"Cheapest: €13 500 (Standvirtual PT). Source: Standvirtual Apr 2026"},
-  {id:7,name:"Renault Zoe R110/R135",P:10000,fuel:410,iuc:0,insurance:480,maint:300,issues:270,residual10:3000,degrad:0.025,
-   details:"Cheapest: €10 000 (Standvirtual/OLX PT). Source: Standvirtual Apr 2026"}
+  {id:5,name:"Nissan Leaf 62kWh",P:13500,fuel:430,iuc:0,insurance:540,maint:350,issues:300,residual10:4200,degrad:0.028,
+   details:"Cheapest: €13 500 (Standvirtual PT). Source: Standvirtual Apr 2026<br>High degradation risk (no active thermal management)"},
+  {id:6,name:"Renault Zoe",P:10000,fuel:410,iuc:0,insurance:480,maint:300,issues:270,residual10:3000,degrad:0.025,
+   details:"Cheapest: €10 000 (Standvirtual/OLX). Source: Standvirtual Apr 2026"},
+  {id:7,name:"Skoda Enyaq 58/60 kWh",P:24000,fuel:520,iuc:0,insurance:680,maint:320,issues:200,residual10:8000,degrad:0.023,
+   details:"Cheapest: €24 000 (Standvirtual/AutoScout24). Source: Standvirtual Apr 2026<br>Spacious SUV, good for holidays"},
+  {id:8,name:"Skoda Enyaq 77/82 kWh",P:27000,fuel:480,iuc:0,insurance:700,maint:320,issues:190,residual10:9500,degrad:0.023,
+   details:"Cheapest: €27 000. Source: AutoScout24 Apr 2026"},
+  {id:9,name:"Hyundai Ioniq 5",P:28000,fuel:460,iuc:0,insurance:690,maint:310,issues:250,residual10:9000,degrad:0.020,
+   details:"Cheapest: €28 000 (Standvirtual). Source: Standvirtual Apr 2026<br><strong>ICCU failure risk (€3 800–4 000 repair if out of warranty)</strong>"},
+  {id:10,name:"Kia EV6",P:27000,fuel:455,iuc:0,insurance:680,maint:300,issues:240,residual10:9200,degrad:0.020,
+   details:"Cheapest: €27 000. Source: Standvirtual Apr 2026<br>ICCU issues similar to Ioniq 5"},
+  {id:11,name:"Renault Megane E-Tech",P:19500,fuel:440,iuc:0,insurance:520,maint:310,issues:180,residual10:6500,degrad:0.022,
+   details:"Cheapest: €19 500 (AutoScout24/Standvirtual). Source: AutoScout24 Apr 2026<br>Minor electronics/charging inconsistencies"}
 ];
 
-let selectedCars = new Set([0,2,4,7]);
+let selectedCars = new Set([0,1,2,3,4,5,6,7,8,9,10,11]);
 
 // ====================== MODEL ======================
 function residualAtYear(P, r10, t) {
@@ -165,7 +173,7 @@ function simulateCar(car, params) {
   return alt3;
 }
 
-// ====================== RENDER CAR LIST WITH FULL COST BREAKDOWN ======================
+// ====================== RENDER CAR LIST ======================
 function renderCarList() {
   const container = document.getElementById('car-list');
   container.innerHTML = CAR_DB.map(car => {
@@ -179,17 +187,16 @@ function renderCarList() {
         </label>
         <button onclick="toggleDetails(${car.id});event.stopImmediatePropagation()" style="margin-left:28px;font-size:0.7rem;color:#2563eb;background:none;border:none;cursor:pointer">Details ▼</button>
         <div id="detail-${car.id}" class="car-detail" style="display:none">
-          <strong>Purchase price (landed PT): €${car.P}</strong><br>
           ${car.details}<br><br>
           <strong>Annual costs breakdown (year 0):</strong><br>
           • Fuel/Electricity: €${car.fuel}<br>
-          • IUC: €${car.iuc} (0 € for all EVs)<br>
+          • IUC: €${car.iuc} (0 € for EVs)<br>
           • Insurance: €${car.insurance}<br>
           • Maintenance: €${car.maint}<br>
           • Known issues/repairs: €${car.issues}<br>
-          • 12V LFP battery replacement (recommended): €200<br>
-          • Total running cost: €${totalRun}/yr<br><br>
-          <strong>Residual value yr10: €${car.residual10}</strong><br>
+          • 12V LFP battery (recommended): €200<br>
+          • Total running: €${totalRun}/yr<br><br>
+          <strong>Residual yr10: €${car.residual10}</strong><br>
           <strong>Battery degradation: ${(car.degrad*100).toFixed(1)}%/yr</strong>
         </div>
       </div>`;
@@ -243,7 +250,6 @@ function generate() {
     height: 520
   }, {responsive: true});
 
-  // Sortable summary table
   const tbody = document.getElementById('tbl-body');
   tbody.innerHTML = Array.from(selectedCars).map(id => {
     const car = CAR_DB.find(c => c.id === id);
@@ -260,9 +266,9 @@ function generate() {
   }).join('');
 
   document.getElementById('summary-card').style.display = 'block';
-}
+};
 
-// Sort table function
+// Sort table
 function sortTable(n) {
   const table = document.getElementById('tbl-body');
   const rows = Array.from(table.rows);
@@ -275,7 +281,6 @@ function sortTable(n) {
   rows.forEach(row => table.appendChild(row));
 }
 
-// Init
 window.onload = () => {
   renderCarList();
   generate();
