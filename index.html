@@ -1,378 +1,857 @@
 <!DOCTYPE html>
-<html lang="pt">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>EV vs Mercedes + QDVE • Portugal</title>
-  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <title>EV vs Current Car — Portugal Financial Tool</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <script src="data-cars.js"></script>
+  <script src="model.js"></script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
-    body { font-family: 'Inter', system-ui, sans-serif; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy:    #0d1b2a;
+      --navy2:   #162032;
+      --navy3:   #1e2f45;
+      --border:  rgba(255,255,255,0.07);
+      --border2: rgba(255,255,255,0.13);
+      --surface: rgba(255,255,255,0.04);
+      --amber:   #f59e0b;
+      --amber2:  #fbbf24;
+      --teal:    #14b8a6;
+      --green:   #22c55e;
+      --red:     #ef4444;
+      --slate:   #94a3b8;
+      --body:    #cbd5e1;
+      --white:   #f1f5f9;
+      --radius:  8px;
+    }
+
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--navy);
+      color: var(--body);
+      font-size: 13.5px;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* ── TOPBAR ── */
+    .topbar {
+      background: var(--navy2);
+      border-bottom: 1px solid var(--border2);
+      height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      position: sticky;
+      top: 0;
+      z-index: 200;
+    }
+    .brand {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 1rem;
+      color: var(--white);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .brand-dot { width: 8px; height: 8px; background: var(--amber); border-radius: 50%; box-shadow: 0 0 8px var(--amber); }
+    .topbar-right { font-size: 0.72rem; color: var(--slate); }
+
+    /* ── LAYOUT ── */
+    .app {
+      display: grid;
+      grid-template-columns: 290px 1fr;
+      min-height: calc(100vh - 50px);
+    }
+
+    /* ── SIDEBAR ── */
+    aside {
+      background: var(--navy2);
+      border-right: 1px solid var(--border);
+      padding: 14px;
+      overflow-y: auto;
+      max-height: calc(100vh - 50px);
+      position: sticky;
+      top: 50px;
+    }
+
+    .section { margin-bottom: 20px; }
+    .sec-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.6rem;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+      color: var(--amber);
+      margin-bottom: 9px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .sec-label::after { content: ''; flex: 1; height: 1px; background: var(--border2); }
+
+    .field { margin-bottom: 8px; }
+    .field label { display: block; font-size: 0.71rem; color: var(--slate); margin-bottom: 3px; }
+    .field input[type=number], .field input[type=text], .field select {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: 5px;
+      color: var(--white);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.79rem;
+      padding: 5px 9px;
+      outline: none;
+      transition: border-color 0.14s;
+      appearance: none;
+    }
+    .field select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%2394a3b8' d='M4 6l4 4 4-4'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 9px center; background-size: 14px; padding-right: 28px; }
+    .field input:focus, .field select:focus { border-color: var(--amber); }
+    .field .hint { font-size: 0.67rem; color: rgba(148,163,184,0.55); margin-top: 2px; line-height: 1.4; }
+
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+
+    /* Toggle pills */
+    .pill-toggle { display: flex; border: 1px solid var(--border2); border-radius: 6px; overflow: hidden; margin-bottom: 8px; }
+    .pill-toggle button {
+      flex: 1; padding: 6px 4px;
+      background: transparent; border: none;
+      color: var(--slate);
+      font-family: 'DM Sans', sans-serif; font-size: 0.76rem; font-weight: 500;
+      cursor: pointer; transition: all 0.14s;
+    }
+    .pill-toggle button.active { background: var(--amber); color: var(--navy); font-weight: 700; }
+
+    /* Info callout */
+    .callout {
+      border: 1px solid rgba(245,158,11,0.22);
+      border-radius: 6px;
+      padding: 8px 10px;
+      background: rgba(245,158,11,0.06);
+      font-size: 0.7rem;
+      color: var(--amber2);
+      line-height: 1.6;
+      margin-bottom: 8px;
+    }
+    .callout strong { color: var(--amber); }
+
+    /* Checkbox */
+    .chk { display: flex; align-items: flex-start; gap: 8px; font-size: 0.77rem; color: var(--body); cursor: pointer; margin-bottom: 6px; }
+    .chk input { margin-top: 2px; accent-color: var(--amber); flex-shrink: 0; }
+    .chk .sub { font-size: 0.67rem; color: var(--slate); display: block; margin-top: 1px; }
+
+    /* Car list */
+    .car-card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 6px;
+      overflow: hidden;
+      transition: border-color 0.14s;
+    }
+    .car-card.selected { border-color: var(--amber); }
+
+    .car-top {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 10px;
+      cursor: pointer;
+      background: var(--surface);
+    }
+    .car-top:hover { background: rgba(255,255,255,0.055); }
+    .car-card.selected .car-top { background: rgba(245,158,11,0.07); }
+
+    .car-swatch { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; opacity: 0; transition: opacity 0.14s; }
+    .car-card.selected .car-swatch { opacity: 1; }
+
+    .car-info { flex: 1; min-width: 0; }
+    .car-name { font-weight: 600; font-size: 0.77rem; color: var(--white); line-height: 1.3; }
+    .car-meta { font-size: 0.65rem; color: var(--slate); font-family: 'DM Mono', monospace; }
+
+    .expand-btn {
+      padding: 2px 8px; background: transparent;
+      border: 1px solid var(--border2); border-radius: 4px;
+      color: var(--slate); font-size: 0.67rem; cursor: pointer;
+      transition: all 0.12s; flex-shrink: 0;
+    }
+    .expand-btn:hover { border-color: var(--amber); color: var(--amber); }
+
+    .car-overrides {
+      display: none;
+      padding: 10px;
+      border-top: 1px solid var(--border);
+      background: rgba(0,0,0,0.18);
+    }
+    .car-overrides.open { display: block; }
+    .ov-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 8px; }
+    .ov-grid label { font-size: 0.65rem; color: var(--slate); display: block; margin-bottom: 2px; }
+    .ov-grid input {
+      width: 100%; background: var(--surface);
+      border: 1px solid var(--border); border-radius: 4px;
+      color: var(--white); font-family: 'DM Mono', monospace;
+      font-size: 0.74rem; padding: 4px 7px; outline: none;
+    }
+    .ov-grid input:focus { border-color: var(--teal); }
+    .reset-btn {
+      font-size: 0.67rem; color: var(--teal); background: none;
+      border: none; cursor: pointer; text-decoration: underline; padding: 0;
+    }
+    .reset-btn:hover { color: var(--amber); }
+    .car-note { font-size: 0.65rem; color: rgba(148,163,184,0.55); margin-top: 6px; line-height: 1.5; }
+
+    /* Generate */
+    .gen-btn {
+      width: 100%; padding: 11px;
+      background: var(--amber); color: var(--navy);
+      font-family: 'Syne', sans-serif; font-weight: 800;
+      font-size: 0.86rem; letter-spacing: 0.04em; text-transform: uppercase;
+      border: none; border-radius: var(--radius);
+      cursor: pointer; margin-top: 6px;
+      transition: background 0.14s, transform 0.1s;
+      box-shadow: 0 0 18px rgba(245,158,11,0.22);
+    }
+    .gen-btn:hover { background: var(--amber2); }
+    .gen-btn:active { transform: translateY(1px); }
+
+    /* ── MAIN ── */
+    main {
+      padding: 16px;
+      display: flex; flex-direction: column; gap: 14px;
+    }
+
+    .card {
+      background: var(--navy2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .card-head {
+      padding: 11px 18px;
+      font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.8rem;
+      color: var(--white);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .badge {
+      font-size: 0.6rem;
+      background: rgba(245,158,11,0.14); color: var(--amber);
+      border: 1px solid rgba(245,158,11,0.28);
+      border-radius: 3px; padding: 1px 6px;
+      font-family: 'DM Mono', monospace; letter-spacing: 0.06em; text-transform: uppercase;
+    }
+
+    /* Chart */
+    #chart-div { width: 100%; }
+
+    /* Empty */
+    .empty-state {
+      display: flex; align-items: center; justify-content: center;
+      height: 400px; flex-direction: column; gap: 10px;
+      color: rgba(148,163,184,0.3);
+    }
+    .empty-icon { font-size: 3.5rem; }
+    .empty-state p { font-size: 0.85rem; }
+
+    /* Table */
+    .tbl-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.77rem; }
+    th {
+      padding: 8px 14px; text-align: left;
+      font-family: 'DM Mono', monospace; font-size: 0.6rem;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--slate); background: rgba(255,255,255,0.03);
+      border-bottom: 1px solid var(--border);
+    }
+    td { padding: 9px 14px; border-bottom: 1px solid var(--border); }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--surface); }
+
+    .mono { font-family: 'DM Mono', monospace; font-weight: 500; }
+    .pos  { color: var(--green); }
+    .neg  { color: var(--red); }
+    .warn { color: #fb923c; }
+
+    .be-pill {
+      display: inline-block; padding: 1px 8px; border-radius: 99px;
+      font-family: 'DM Mono', monospace; font-size: 0.67rem; font-weight: 500;
+    }
+    .be-early  { background: rgba(34,197,94,0.12);  color: var(--green);  border: 1px solid rgba(34,197,94,0.25); }
+    .be-mid    { background: rgba(245,158,11,0.12); color: var(--amber2); border: 1px solid rgba(245,158,11,0.25); }
+    .be-late   { background: rgba(239,68,68,0.12);  color: var(--red);    border: 1px solid rgba(239,68,68,0.25); }
+    .be-never  { background: rgba(148,163,184,0.1); color: var(--slate);  border: 1px solid rgba(148,163,184,0.2); }
+
+    /* Footer notes */
+    .notes {
+      border: 1px solid rgba(245,158,11,0.18);
+      border-radius: var(--radius);
+      padding: 14px 18px;
+      background: rgba(245,158,11,0.04);
+      font-size: 0.7rem;
+      color: rgba(148,163,184,0.75);
+      line-height: 1.85;
+    }
+    .notes strong { color: var(--amber2); }
+    .notes .warn-text { color: #fb923c; font-weight: 600; }
+
+    @media (max-width: 820px) {
+      .app { grid-template-columns: 1fr; }
+      aside { max-height: none; position: static; }
+    }
   </style>
 </head>
-<body class="bg-gray-50">
-  <div class="max-w-7xl mx-auto p-8">
-    <div class="flex justify-between items-center mb-8">
-      <div>
-        <h1 class="text-4xl font-semibold text-gray-900">🚗 EV vs Mercedes + QDVE</h1>
-        <p class="text-gray-600 mt-1">Simulação completa 10 anos – breakeven exato • Portugal</p>
-      </div>
-      <a href="https://github.com/teu-utilizador/ev-vs-mercedes-qdve" target="_blank"
-         class="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1">
-        <span>Ver no GitHub</span>
-      </a>
-    </div>
+<body>
 
-    <!-- Controls -->
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-      <div class="lg:col-span-4 bg-white rounded-3xl shadow p-8">
-        <h2 class="font-semibold text-lg mb-6">Parâmetros</h2>
-
-        <!-- Carros – AGORA COM TODOS OS MODELOS (inclui Mercedes como opção) -->
-        <div class="mb-8">
-          <p class="text-sm font-medium text-gray-500 mb-3">Carros a comparar<br><span class="text-xs text-gray-400">(Mercedes = baseline – linha zero)</span></p>
-          <div id="car-list" class="space-y-2 max-h-96 overflow-y-auto pr-2"></div>
-        </div>
-
-        <!-- Investimento -->
-        <div class="mb-8">
-          <label class="block text-sm font-medium text-gray-500 mb-2">Investimento do prémio EV</label>
-          <select id="inv-type" onchange="toggleInvestment()" class="w-full border border-gray-300 rounded-2xl px-4 py-3 text-sm">
-            <option value="qdve" selected>QDVE (default)</option>
-            <option value="other">Outro investimento</option>
-          </select>
-          <div id="qdve-options" class="mt-4">
-            <label class="flex items-center gap-2 text-sm">
-              <input type="checkbox" id="conservative" checked class="w-4 h-4">
-              <span>Usar retorno conservador 12% (em vez de ~18% histórico)</span>
-            </label>
-          </div>
-          <div id="other-rate" class="hidden mt-4">
-            <label class="block text-sm text-gray-500 mb-1">Retorno anual esperado (%)</label>
-            <input type="number" id="custom-rate" value="12" step="0.1" class="w-full border border-gray-300 rounded-2xl px-4 py-3 text-sm">
-          </div>
-        </div>
-
-        <!-- Outros parâmetros -->
-        <div class="space-y-6">
-          <div>
-            <label class="block text-sm font-medium text-gray-500 mb-2">Anos de simulação</label>
-            <input type="range" id="years" min="5" max="15" value="10" class="w-full accent-blue-600">
-            <div class="flex justify-between text-xs text-gray-500 mt-1">
-              <span>5</span><span id="years-value" class="font-semibold text-gray-900">10</span><span>15</span>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-2 gap-6">
-            <div>
-              <label class="block text-sm font-medium text-gray-500 mb-2">R_base Mercedes (%)</label>
-              <input type="range" id="rbase" min="70" max="130" value="100" class="w-full accent-blue-600">
-              <div class="text-center text-sm font-semibold text-gray-900" id="rbase-value">100%</div>
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-500 mb-2">Combustível Mercedes (%)</label>
-              <input type="range" id="fuel" min="70" max="130" value="100" class="w-full accent-blue-600">
-              <div class="text-center text-sm font-semibold text-gray-900" id="fuel-value">100%</div>
-            </div>
-          </div>
-
-          <label class="flex items-center gap-3">
-            <input type="checkbox" id="cgt" checked class="w-5 h-5 accent-blue-600">
-            <span class="text-sm">Aplicar CGT 28% no final (realista)</span>
-          </label>
-        </div>
-
-        <button onclick="runSimulation()" 
-                class="mt-10 w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 rounded-3xl text-lg transition">
-          🚀 Gerar Simulação
-        </button>
-      </div>
-
-      <!-- Results -->
-      <div class="lg:col-span-8">
-        <div id="results" class="hidden">
-          <!-- Gráfico -->
-          <div class="bg-white rounded-3xl shadow p-6 mb-8">
-            <canvas id="chart" class="w-full" height="420"></canvas>
-          </div>
-
-          <!-- Tabela -->
-          <div class="bg-white rounded-3xl shadow p-6">
-            <h3 class="font-semibold mb-4">Resumo</h3>
-            <table id="summary-table" class="w-full text-sm"></table>
-          </div>
-
-          <button onclick="downloadCSV()" 
-                  class="mt-6 flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium">
-            📥 Download CSV completo
-          </button>
-        </div>
-
-        <div id="empty-state" class="bg-white rounded-3xl shadow p-12 text-center">
-          <p class="text-gray-400 text-xl">Seleciona os carros e clica em Gerar Simulação</p>
-        </div>
-      </div>
-    </div>
+<div class="topbar">
+  <div class="brand">
+    <div class="brand-dot"></div>
+    EV Decision Tool
+    <span style="font-weight:300;font-size:0.72rem;color:var(--slate);font-family:'DM Sans',sans-serif;margin-left:4px;">Portugal · 2026</span>
   </div>
+  <div class="topbar-right">Net worth delta over 10 years · All prior model bugs corrected</div>
+</div>
 
-  <script>
-    // ==================== DADOS BASE – AGORA COM TODOS OS MODELOS ====================
-    const baseline = {
-      name: "Mercedes C-Class (Baseline)",
-      running_costs: Array.from({length:15}, (_,i) => Math.round(4522 * Math.pow(1.02, i))),
-      fuel_costs:    Array.from({length:15}, (_,i) => Math.round(1800 * Math.pow(1.04, i))),
-      other_costs:   Array.from({length:15}, (_,i) => Math.round(2722 * Math.pow(1.02, i))),
-      residuals:     Array.from({length:15}, (_,i) => Math.round(35000 - i*2200))
-    };
+<div class="app">
 
-    const cars = {
-      "Mercedes C-Class (Baseline)": baseline,   // ← agora também selecionável (linha zero)
-      "Tesla Model Y": {
-        running_costs: Array.from({length:15}, (_,i) => Math.round(1690 * Math.pow(1.02, i))),
-        residuals:     Array.from({length:15}, (_,i) => Math.round(52000 - i*2800)),
-        annual_loan_pmt: 3800,
-        initial_withdrawal: 8000
-      },
-      "VW ID.3": {
-        running_costs: Array.from({length:15}, (_,i) => Math.round(1750 * Math.pow(1.02, i))),
-        residuals:     Array.from({length:15}, (_,i) => Math.round(42000 - i*2600)),
-        annual_loan_pmt: 3600,
-        initial_withdrawal: 6000
-      },
-      "Hyundai Ioniq 5": {
-        running_costs: Array.from({length:15}, (_,i) => Math.round(1720 * Math.pow(1.02, i))),
-        residuals:     Array.from({length:15}, (_,i) => Math.round(48000 - i*2700)),
-        annual_loan_pmt: 3700,
-        initial_withdrawal: 7000
-      },
-      "Renault Megane E-Tech": {
-        running_costs: Array.from({length:15}, (_,i) => Math.round(1620 * Math.pow(1.02, i))),
-        residuals:     Array.from({length:15}, (_,i) => Math.round(38000 - i*2400)),
-        annual_loan_pmt: 3400,
-        initial_withdrawal: 5500
-      },
-      "Peugeot e-208": {
-        running_costs: Array.from({length:15}, (_,i) => Math.round(1480 * Math.pow(1.02, i))),
-        residuals:     Array.from({length:15}, (_,i) => Math.round(26500 - i*2100)),
-        annual_loan_pmt: 2900,
-        initial_withdrawal: 4200
-      },
-      "Skoda Enyaq": {
-        running_costs: Array.from({length:15}, (_,i) => Math.round(1780 * Math.pow(1.02, i))),
-        residuals:     Array.from({length:15}, (_,i) => Math.round(46000 - i*2650)),
-        annual_loan_pmt: 3750,
-        initial_withdrawal: 7200
-      },
-      "BYD Atto 3": {
-        running_costs: Array.from({length:15}, (_,i) => Math.round(1580 * Math.pow(1.02, i))),
-        residuals:     Array.from({length:15}, (_,i) => Math.round(41000 - i*2550)),
-        annual_loan_pmt: 3550,
-        initial_withdrawal: 6300
-      },
-      "Cupra Born": {
-        running_costs: Array.from({length:15}, (_,i) => Math.round(1710 * Math.pow(1.02, i))),
-        residuals:     Array.from({length:15}, (_,i) => Math.round(43500 - i*2500)),
-        annual_loan_pmt: 3650,
-        initial_withdrawal: 6800
-      },
-      "Fiat 600e": {
-        running_costs: Array.from({length:15}, (_,i) => Math.round(1550 * Math.pow(1.02, i))),
-        residuals:     Array.from({length:15}, (_,i) => Math.round(29500 - i*2200)),
-        annual_loan_pmt: 3100,
-        initial_withdrawal: 4800
-      },
-      "Citroën ë-C4": {
-        running_costs: Array.from({length:15}, (_,i) => Math.round(1600 * Math.pow(1.02, i))),
-        residuals:     Array.from({length:15}, (_,i) => Math.round(34500 - i*2300)),
-        annual_loan_pmt: 3300,
-        initial_withdrawal: 5200
-      }
-    };
+  <!-- ===== SIDEBAR ===== -->
+  <aside id="sidebar">
 
-    let chartInstance = null;
+    <!-- CURRENT CAR -->
+    <div class="section">
+      <div class="sec-label">Current Car (Baseline = €0)</div>
+      <div class="field">
+        <label>Sale price today (€)</label>
+        <input type="number" id="S" value="5000" min="0" step="100">
+      </div>
+      <div class="field">
+        <label>Annual running cost — year 0 (€/yr)</label>
+        <input type="number" id="R_base" value="4522" min="0" step="50">
+        <div class="hint">Fuel + insurance + IUC + maintenance + repairs</div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>Residual in 10 yrs (€)</label>
+          <input type="number" id="mercRes10" value="1200" min="0" step="100">
+        </div>
+        <div class="field">
+          <label>Fuel share of cost (%)</label>
+          <input type="number" id="fuelShare" value="40" min="0" max="100" step="5">
+          <div class="hint">Used for fuel-price sensitivity</div>
+        </div>
+      </div>
+    </div>
 
-    // ==================== RENDER CAR CHECKBOXES (agora com todos) ====================
-    function renderCarList() {
-      const container = document.getElementById("car-list");
-      container.innerHTML = Object.keys(cars).map(name => `
-        <label class="flex items-center gap-3 cursor-pointer hover:bg-gray-50 p-2 rounded-2xl">
-          <input type="checkbox" value="${name}" class="car-checkbox w-5 h-5 accent-blue-600">
-          <span class="text-gray-700">${name}</span>
-        </label>
-      `).join("");
-    }
+    <!-- INVESTMENT -->
+    <div class="section">
+      <div class="sec-label">Investment Vehicle</div>
+      <div class="pill-toggle">
+        <button class="active" id="btn-qdve"  onclick="setInv('qdve')">QDVE (default)</button>
+        <button             id="btn-other" onclick="setInv('other')">Custom</button>
+      </div>
 
-    function toggleInvestment() {
-      const isQdve = document.getElementById("inv-type").value === "qdve";
-      document.getElementById("qdve-options").classList.toggle("hidden", !isQdve);
-      document.getElementById("other-rate").classList.toggle("hidden", isQdve);
-    }
+      <div id="panel-qdve">
+        <div class="callout">
+          <strong>iShares MSCI World Quality Dividend (QDVE)</strong><br>
+          Historical gross return since 2014: <strong>~15–17%/yr</strong><br>
+          Conservative estimate used in model: <strong>12%/yr gross</strong><br>
+          Portuguese CGT 28% applied at redemption (year 10) only
+        </div>
+        <div class="field">
+          <label>Conservative expected return — gross (%/yr)</label>
+          <input type="number" id="qdveReturn" value="12" min="1" max="40" step="0.5">
+        </div>
+      </div>
 
-    // ==================== SIMULATION LOGIC (corrigida e idêntica à versão Python) ====================
-    function simulateCar(carName, years, qdveRate, applyCgt, cgtRate, rBaseAdj, fuelAdj) {
-      const car = cars[carName];
-      const merFuelAdj = baseline.fuel_costs.slice(0, years).map(v => v * fuelAdj);
-      const merOtherAdj = baseline.other_costs.slice(0, years).map(v => v * rBaseAdj);
-      const adjMerRunning = merFuelAdj.map((f, i) => f + merOtherAdj[i]);
+      <div id="panel-other" style="display:none;">
+        <div class="field">
+          <label>Historical avg. gross return (%/yr)</label>
+          <input type="number" id="otherHistorical" value="10" min="1" max="50" step="0.5">
+        </div>
+        <div class="field">
+          <label>Conservative expected return (%/yr)</label>
+          <input type="number" id="otherReturn" value="8" min="1" max="30" step="0.5">
+        </div>
+        <div class="field">
+          <label>Investment name</label>
+          <input type="text" id="otherName" placeholder="e.g. S&P 500, real estate…">
+        </div>
+      </div>
+    </div>
 
-      let qdve = -car.initial_withdrawal;
-      const portfolio = [qdve];
-      const nwDelta = [];
-      const residualDeltaSeries = [];
+    <!-- FINANCING -->
+    <div class="section">
+      <div class="sec-label">Financing</div>
+      <div class="row2">
+        <div class="field">
+          <label>Loan rate — TAN (%/yr)</label>
+          <input type="number" id="loanRate" value="9.1" min="0" max="30" step="0.1">
+        </div>
+        <div class="field">
+          <label>Loan term (years)</label>
+          <input type="number" id="loanTerm" value="5" min="1" max="10" step="1">
+        </div>
+      </div>
+    </div>
 
-      for (let t = 0; t < years; t++) {
-        const savings = adjMerRunning[t] - car.running_costs[t];
-        const netCf = savings - (car.annual_loan_pmt || 0);
+    <!-- CHARGING & PURCHASE COSTS -->
+    <div class="section">
+      <div class="sec-label">Charging &amp; Costs</div>
+      <div class="row2">
+        <div class="field">
+          <label>Home rate (€/kWh)</label>
+          <input type="number" id="homeRate" value="0.16" min="0.01" max="2" step="0.01">
+        </div>
+        <div class="field">
+          <label>Public charging (%)</label>
+          <input type="number" id="publicPct" value="12" min="0" max="100" step="1">
+          <div class="hint">% km on public chargers</div>
+        </div>
+      </div>
+      <div class="field">
+        <label>Public charger rate (€/kWh)</label>
+        <input type="number" id="publicKwh" value="0.55" min="0.05" max="2" step="0.01">
+        <div class="hint">Blended Galp/Prio/Zap PT 2026</div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>Home charger + install (€)</label>
+          <input type="number" id="charger" value="1100" min="0" max="5000" step="100">
+        </div>
+        <div class="field">
+          <label>Registration / fees (€)</label>
+          <input type="number" id="registration" value="200" min="0" max="2000" step="50">
+          <div class="hint">Stamp duty + DUA + plates</div>
+        </div>
+      </div>
+    </div>
 
-        qdve += netCf;
-        qdve *= (1 + qdveRate);
-        portfolio.push(qdve);
+    <!-- ECONOMIC -->
+    <div class="section">
+      <div class="sec-label">Economics</div>
+      <div class="row2">
+        <div class="field">
+          <label>Inflation — PT (%/yr)</label>
+          <input type="number" id="inflation" value="2.2" min="0" max="20" step="0.1">
+        </div>
+        <div class="field">
+          <label>CGT — plus-valias (%)</label>
+          <input type="number" id="cgt" value="28" min="0" max="60" step="1">
+        </div>
+      </div>
+    </div>
 
-        const resDelta = car.residuals[t] - baseline.residuals[t];
-        residualDeltaSeries.push(resDelta);
+    <!-- SCENARIOS -->
+    <div class="section">
+      <div class="sec-label">Scenarios</div>
+      <label class="chk">
+        <input type="checkbox" id="s1" checked>
+        <span>Alt1 — Loan (D stays in QDVE)
+          <span class="sub">Borrow the shortfall · no upfront QDVE withdrawal for D</span>
+        </span>
+      </label>
+      <label class="chk">
+        <input type="checkbox" id="s2">
+        <span>Alt2 — Cash, savings NOT reinvested
+          <span class="sub">Lower bound · best if you won't invest the savings</span>
+        </span>
+      </label>
+      <label class="chk">
+        <input type="checkbox" id="s3" checked>
+        <span>Alt3 — Cash + reinvest savings
+          <span class="sub">Best realistic case · all savings go back into QDVE</span>
+        </span>
+      </label>
+      <label class="chk">
+        <input type="checkbox" id="sBand">
+        <span>±20% return sensitivity band
+          <span class="sub">Alt3 only · shaded region around central estimate</span>
+        </span>
+      </label>
+    </div>
 
-        nwDelta.push(Math.round(qdve + resDelta));
-      }
+    <!-- SENSITIVITY -->
+    <div class="section">
+      <div class="sec-label">Sensitivity Overlays</div>
+      <div class="field">
+        <label>Mercedes fuel cost adjustment (%)</label>
+        <input type="number" id="fuelAdj" value="100" min="60" max="150" step="5">
+        <div class="hint">100% = base case · 120% = fuel 20% more expensive</div>
+      </div>
+      <div class="field">
+        <label>Mercedes non-fuel cost adjustment (%)</label>
+        <input type="number" id="rbaseAdj" value="100" min="60" max="150" step="5">
+        <div class="hint">Insurance, maintenance, IUC component</div>
+      </div>
+    </div>
 
-      // CGT só no último ano
-      let finalPortfolio = portfolio[portfolio.length - 1];
-      if (applyCgt && finalPortfolio > 0) {
-        const gain = finalPortfolio - (car.initial_withdrawal || 0);
-        const cgtAmount = Math.max(0, gain) * cgtRate;
-        finalPortfolio -= cgtAmount;
-        nwDelta[nwDelta.length - 1] = Math.round(finalPortfolio + residualDeltaSeries[residualDeltaSeries.length - 1]);
-      }
+    <!-- CARS -->
+    <div class="section">
+      <div class="sec-label">Select EVs to Compare</div>
+      <div id="car-list"></div>
+    </div>
 
-      let breakeven = null;
-      for (let i = 0; i < nwDelta.length; i++) {
-        if (nwDelta[i] >= 0) {
-          breakeven = i + 1;
-          break;
-        }
-      }
+    <button class="gen-btn" onclick="generate()">⚡ Generate Chart</button>
+    <div style="height:10px;"></div>
 
-      return {
-        name: carName,
-        nwDelta,
-        breakeven: breakeven || `Nunca (${years} anos)`,
-        finalDelta: nwDelta[nwDelta.length - 1]
-      };
-    }
+  </aside>
 
-    function runSimulation() {
-      const selected = Array.from(document.querySelectorAll(".car-checkbox:checked")).map(cb => cb.value);
-      if (selected.length === 0) {
-        alert("Seleciona pelo menos um carro!");
-        return;
-      }
+  <!-- ===== MAIN ===== -->
+  <main>
 
-      const years = parseInt(document.getElementById("years").value);
-      const isQdve = document.getElementById("inv-type").value === "qdve";
-      let rate = isQdve 
-        ? (document.getElementById("conservative").checked ? 0.12 : 0.18)
-        : parseFloat(document.getElementById("custom-rate").value) / 100;
+    <div class="card">
+      <div class="card-head">
+        Net Worth Delta vs Keeping Current Car
+        <span class="badge">Portugal 2026</span>
+        <span id="inv-label" class="badge" style="background:rgba(20,184,166,0.14);color:#2dd4bf;border-color:rgba(20,184,166,0.3);">QDVE · 12% gross</span>
+      </div>
+      <div id="chart-div">
+        <div class="empty-state" id="empty-state">
+          <div class="empty-icon">⚡</div>
+          <p>Select at least one EV and click Generate Chart</p>
+        </div>
+      </div>
+    </div>
 
-      const applyCgt = document.getElementById("cgt").checked;
-      const rBaseAdj = parseFloat(document.getElementById("rbase").value) / 100;
-      const fuelAdj = parseFloat(document.getElementById("fuel").value) / 100;
-
-      const results = selected.map(car => simulateCar(car, years, rate, applyCgt, 0.28, rBaseAdj, fuelAdj));
-
-      document.getElementById("empty-state").classList.add("hidden");
-      document.getElementById("results").classList.remove("hidden");
-
-      // Gráfico
-      const ctx = document.getElementById("chart");
-      if (chartInstance) chartInstance.destroy();
-      
-      chartInstance = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: Array.from({length: years}, (_, i) => i + 1),
-          datasets: results.map((r, i) => ({
-            label: r.name,
-            data: r.nwDelta,
-            borderColor: `hsl(${i * 35}, 85%, 55%)`,
-            tension: 0.3,
-            borderWidth: 3,
-            pointRadius: 4
-          }))
-        },
-        options: {
-          responsive: true,
-          plugins: { legend: { position: 'top' } },
-          scales: {
-            y: { title: { display: true, text: 'Vantagem Patrimonial (€)' } },
-            x: { title: { display: true, text: 'Ano' } }
-          }
-        }
-      });
-
-      // Tabela
-      const tbody = document.getElementById("summary-table");
-      tbody.innerHTML = `
-        <thead>
-          <tr class="border-b text-left text-xs uppercase text-gray-500">
-            <th class="pb-3">Carro</th>
-            <th class="pb-3 text-right">Breakeven</th>
-            <th class="pb-3 text-right">Vantagem final (${years} anos)</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${results.map(r => `
-            <tr class="border-b last:border-0">
-              <td class="py-4 font-medium">${r.name}</td>
-              <td class="py-4 text-right">${r.breakeven}</td>
-              <td class="py-4 text-right font-semibold ${r.finalDelta >= 0 ? 'text-green-600' : 'text-red-600'}">
-                ${r.finalDelta.toLocaleString('pt-PT')} €
-              </td>
+    <div class="card" id="summary-card" style="display:none;">
+      <div class="card-head">Breakeven &amp; Delta Summary <span class="badge">All scenarios</span></div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Car</th>
+              <th>Scenario</th>
+              <th>Breakeven</th>
+              <th>Year-5 Delta</th>
+              <th>Year-10 Delta (after CGT)</th>
             </tr>
-          `).join("")}
-        </tbody>
-      `;
+          </thead>
+          <tbody id="tbl-body"></tbody>
+        </table>
+      </div>
+    </div>
 
-      window.lastResults = { results, years, selected };
+    <div class="notes" id="notes-div" style="display:none;">
+      <strong>How to read this:</strong> Baseline = €0 (keeping current car). Positive = you are richer.<br>
+      <strong>EV age factor:</strong> Maintenance &amp; repairs grow +8%/yr above CPI. Current car grows +12%/yr (older ICE unreliability penalty).<br>
+      <strong>Depreciation:</strong> Front-loaded convex curve (t^1.6) — matches observed used EV market data (AutoTrader PT, Autobild 2023-25).<br>
+      <strong>Battery degradation:</strong> Electricity consumption rises each year per per-car degrad rate. Leaf (no active thermal) degrades fastest (2.8%/yr).<br>
+      <strong>CGT:</strong> 28% applied at year 10 on QDVE portfolio <em>gain only</em> (not total NW delta). Matches Portuguese ETF redemption tax law.<br>
+      <strong>Public charging:</strong> Effective kWh cost = weighted blend of home and public rates. Adjusted annually for battery degradation.<br>
+      <strong>Alt1 loan shortfall:</strong> If savings &lt; loan payment in early years, shortfall assumed paid from income (not additional QDVE withdrawal).<br>
+      <strong>Sensitivity band:</strong> ±20% on gross investment return — recomputed at different return rates (not scaled savings).<br>
+      <span class="warn-text">⚠ Leaf &amp; Zoe:</span> Thin resale market in Portugal. Residual10 values may be optimistic — consider applying a manual haircut in the override fields.<br>
+      <strong>Bugs fixed vs prior Python versions:</strong> Residual delta (was double-counted — up to €100K error at yr10), CGT base (QDVE gain only), CGT parity Alt1/Alt3, R_base sensitivity (recomputed, not scaled), Alt2 initial withdrawal, summary table (now computed).
+    </div>
+
+    <div style="height:8px;"></div>
+  </main>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// PALETTE & STATE
+// ═══════════════════════════════════════════════════════
+const PALETTE = ['#f59e0b','#06b6d4','#a78bfa','#34d399','#f87171','#fb923c','#60a5fa','#e879f9'];
+
+let invMode    = 'qdve';
+let selected   = new Set([0, 2]);    // IDs of selected cars
+let overrides  = {};                 // { carId: { fieldName: value, … } }
+let expanded   = new Set();          // IDs of expanded car detail panels
+
+// ═══════════════════════════════════════════════════════
+// INVESTMENT TOGGLE
+// ═══════════════════════════════════════════════════════
+function setInv(mode) {
+  invMode = mode;
+  document.getElementById('btn-qdve').classList.toggle('active', mode === 'qdve');
+  document.getElementById('btn-other').classList.toggle('active', mode === 'other');
+  document.getElementById('panel-qdve').style.display  = mode === 'qdve'  ? '' : 'none';
+  document.getElementById('panel-other').style.display = mode === 'other' ? '' : 'none';
+  updateInvLabel();
+}
+
+function updateInvLabel() {
+  const gr   = getGrossReturn();
+  const name = invMode === 'qdve'
+    ? 'QDVE · ' + (gr * 100).toFixed(1) + '% gross'
+    : (document.getElementById('otherName').value || 'Custom') + ' · ' + (gr * 100).toFixed(1) + '%';
+  document.getElementById('inv-label').textContent = name;
+}
+
+function getGrossReturn() {
+  return invMode === 'qdve'
+    ? (parseFloat(document.getElementById('qdveReturn').value) || 12) / 100
+    : (parseFloat(document.getElementById('otherReturn').value) || 8)  / 100;
+}
+
+// ═══════════════════════════════════════════════════════
+// PARAMS COLLECTOR
+// ═══════════════════════════════════════════════════════
+function getParams() {
+  return {
+    S:            parseFloat(document.getElementById('S').value)            || 5000,
+    R_base:       parseFloat(document.getElementById('R_base').value)       || 4522,
+    mercRes10:    parseFloat(document.getElementById('mercRes10').value)     || 1200,
+    fuelShare:    (parseFloat(document.getElementById('fuelShare').value)    || 40)  / 100,
+    charger:      parseFloat(document.getElementById('charger').value)      || 0,
+    registration: parseFloat(document.getElementById('registration').value) || 0,
+    loanRate:     (parseFloat(document.getElementById('loanRate').value)    || 9.1)  / 100,
+    loanTerm:     parseInt(document.getElementById('loanTerm').value)       || 5,
+    CGT:          (parseFloat(document.getElementById('cgt').value)         || 28)   / 100,
+    inflation:    (parseFloat(document.getElementById('inflation').value)   || 2.2)  / 100,
+    publicPct:    (parseFloat(document.getElementById('publicPct').value)   || 0)    / 100,
+    publicKwh:    parseFloat(document.getElementById('publicKwh').value)    || 0.55,
+    homeRate:     parseFloat(document.getElementById('homeRate').value)     || 0.16,
+    grossReturn:  getGrossReturn(),
+    rbaseAdj:     (parseFloat(document.getElementById('rbaseAdj').value)    || 100)  / 100,
+    fuelAdj:      (parseFloat(document.getElementById('fuelAdj').value)     || 100)  / 100,
+  };
+}
+
+// ═══════════════════════════════════════════════════════
+// CAR — EFFECTIVE RECORD (base + user overrides)
+// ═══════════════════════════════════════════════════════
+function effectiveCar(id) {
+  const base = CAR_DB.find(c => c.id === id);
+  const ov   = overrides[id] || {};
+  const merged = { ...base };
+  for (const k in ov) {
+    if (ov[k] !== '' && ov[k] !== null && ov[k] !== undefined) {
+      merged[k] = parseFloat(ov[k]);
+    }
+  }
+  return merged;
+}
+
+// ═══════════════════════════════════════════════════════
+// RENDER CAR LIST
+// ═══════════════════════════════════════════════════════
+function renderCarList() {
+  const container = document.getElementById('car-list');
+  container.innerHTML = '';
+
+  CAR_DB.forEach((car, idx) => {
+    const isOn  = selected.has(car.id);
+    const isExp = expanded.has(car.id);
+    const color = PALETTE[idx % PALETTE.length];
+
+    const card = document.createElement('div');
+    card.className = `car-card${isOn ? ' selected' : ''}`;
+    card.id = `car-card-${car.id}`;
+
+    // Build total base running cost for display
+    const totalRun = car.fuel + car.iuc + car.insurance + car.maint + car.issues;
+
+    card.innerHTML = `
+      <div class="car-top" onclick="toggleCar(${car.id}, ${idx})">
+        <input type="checkbox" ${isOn ? 'checked' : ''} onclick="event.stopPropagation(); toggleCar(${car.id}, ${idx})" style="accent-color:${color}; cursor:pointer; flex-shrink:0;">
+        <div class="car-swatch" id="swatch-${car.id}" style="background:${color}"></div>
+        <div class="car-info">
+          <div class="car-name">${car.name}</div>
+          <div class="car-meta">€${car.P.toLocaleString()} · €${totalRun.toLocaleString()}/yr</div>
+        </div>
+        <button class="expand-btn" onclick="event.stopPropagation(); toggleExpand(${car.id})">${isExp ? '▲' : '▼'}</button>
+      </div>
+      <div class="car-overrides${isExp ? ' open' : ''}" id="ov-${car.id}">
+        <div class="ov-grid">
+          ${[
+            ['P',          'Purchase price (€)',     car.P],
+            ['fuel',       'Annual electricity (€)',  car.fuel],
+            ['insurance',  'Insurance (€/yr)',        car.insurance],
+            ['maint',      'Maintenance (€/yr)',      car.maint],
+            ['issues',     'Avg. repairs (€/yr)',     car.issues],
+            ['iuc',        'IUC (€/yr)',              car.iuc],
+            ['residual10', 'Residual yr10 (€)',       car.residual10],
+            ['degrad',     'Batt. degrad. (%/yr)',    (car.degrad*100).toFixed(1)],
+          ].map(([k, lbl, def]) => `
+            <div>
+              <label>${lbl}</label>
+              <input type="number" value="${overrides[car.id]?.[k] ?? ''}" placeholder="${def}"
+                oninput="setOverride(${car.id}, '${k}', this.value)"
+                step="${k === 'degrad' ? '0.1' : '50'}">
+            </div>
+          `).join('')}
+        </div>
+        <button class="reset-btn" onclick="resetOverrides(${car.id})">↺ Reset to defaults</button>
+        <div class="car-note">${car.note}</div>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+function toggleCar(id, idx) {
+  if (selected.has(id)) selected.delete(id);
+  else selected.add(id);
+  renderCarList();
+}
+
+function toggleExpand(id) {
+  if (expanded.has(id)) expanded.delete(id);
+  else expanded.add(id);
+  renderCarList();
+}
+
+function setOverride(id, field, val) {
+  if (!overrides[id]) overrides[id] = {};
+  overrides[id][field] = val;
+}
+
+function resetOverrides(id) {
+  delete overrides[id];
+  renderCarList();
+}
+
+// ═══════════════════════════════════════════════════════
+// GENERATE CHART
+// ═══════════════════════════════════════════════════════
+function generate() {
+  const selArr = Array.from(selected);
+  if (!selArr.length) {
+    alert('Select at least one car to compare.');
+    return;
+  }
+
+  updateInvLabel();
+  const params  = getParams();
+  const YEARS   = Array.from({ length: 11 }, (_, i) => i);
+  const showA1  = document.getElementById('s1').checked;
+  const showA2  = document.getElementById('s2').checked;
+  const showA3  = document.getElementById('s3').checked;
+  const showBnd = document.getElementById('sBand').checked;
+
+  const traces = [];
+  const rows   = [];
+
+  // Baseline
+  traces.push({
+    x: YEARS, y: new Array(11).fill(0),
+    name: 'Baseline — keep current car',
+    legendgroup: '__baseline__',
+    line: { color: 'rgba(148,163,184,0.5)', dash: 'dash', width: 2 },
+    hovertemplate: 'Year %{x}: €0 (baseline)<extra>Keep current car</extra>',
+    type: 'scatter', mode: 'lines',
+  });
+
+  selArr.forEach((id, idx) => {
+    const car   = effectiveCar(id);
+    const color = PALETTE[idx % PALETTE.length];
+    const gr    = params.grossReturn;
+
+    // Sensitivity band first (renders behind lines)
+    if (showBnd && showA3) {
+      const lo = simulateCar(car, params, gr * 0.8).alt3;
+      const hi = simulateCar(car, params, gr * 1.2).alt3;
+      traces.push({
+        x: [...YEARS, ...YEARS.slice().reverse()],
+        y: [...hi, ...lo.slice().reverse()],
+        fill: 'toself',
+        fillcolor: hexToRgba(color, 0.11),
+        line: { width: 0 },
+        showlegend: false, hoverinfo: 'skip',
+        legendgroup: car.name, type: 'scatter',
+      });
     }
 
-    function downloadCSV() {
-      if (!window.lastResults) return;
-      const { results, years } = window.lastResults;
-      let csv = "Ano," + results.map(r => `"${r.name}"`).join(",") + "\n";
-      for (let y = 0; y < years; y++) {
-        csv += (y + 1) + "," + results.map(r => r.nwDelta[y]).join(",") + "\n";
-      }
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "simulacao_ev_vs_mercedes.csv";
-      a.click();
-    }
+    const res = simulateCar(car, params, gr, params.rbaseAdj, params.fuelAdj);
 
-    function init() {
-      renderCarList();
-      document.getElementById("years").addEventListener("input", e => {
-        document.getElementById("years-value").textContent = e.target.value;
-      });
-      document.getElementById("rbase").addEventListener("input", e => {
-        document.getElementById("rbase-value").textContent = e.target.value + "%";
-      });
-      document.getElementById("fuel").addEventListener("input", e => {
-        document.getElementById("fuel-value").textContent = e.target.value + "%";
-      });
-      
-      // Selecionar por defeito todos exceto Mercedes (mas Mercedes está disponível)
-      setTimeout(() => {
-        const checkboxes = document.querySelectorAll(".car-checkbox");
-        checkboxes.forEach(cb => {
-          if (["Tesla Model Y","VW ID.3","Hyundai Ioniq 5","Renault Megane E-Tech","Skoda Enyaq"].includes(cb.value)) {
-            cb.checked = true;
-          }
-        });
-      }, 100);
-    }
-    window.onload = init;
-  </script>
+    const addLine = (data, label, dash, width) => traces.push({
+      x: YEARS,
+      y: data.map(v => isFinite(v) ? v : 0),
+      name: `${car.name} · ${label}`,
+      legendgroup: car.name,
+      legendgrouptitle: { text: car.name, font: { size: 9.5 } },
+      line: { color, dash, width },
+      hovertemplate: `Year %{x}: <b>€%{y:,.0f}</b><extra>${car.name} · ${label}</extra>`,
+      type: 'scatter', mode: 'lines',
+    });
+
+    if (showA1) addLine(res.alt1, 'Loan / Alt1',              'solid',   2.5);
+    if (showA2) addLine(res.alt2, 'Cash / no reinvest · Alt2','dot',     1.8);
+    if (showA3) addLine(res.alt3, 'Cash + reinvest · Alt3',   'dashdot', 2.5);
+
+    // Summary rows (FIX 6: actual computed values)
+    const summaries = summaryRows(car, params, { showAlt1: showA1, showAlt2: showA2, showAlt3: showA3 });
+    rows.push(...summaries.map(r => ({ ...r, color })));
+  });
+
+  // ── PLOTLY ────────────────────────────────────────────
+  document.getElementById('empty-state').style.display = 'none';
+
+  Plotly.newPlot('chart-div', traces, {
+    xaxis: {
+      title: { text: 'Years from purchase', font: { family: 'DM Sans', size: 12, color: '#94a3b8' } },
+      dtick: 1, range: [-0.3, 10.3],
+      gridcolor: 'rgba(255,255,255,0.05)',
+      zerolinecolor: 'rgba(255,255,255,0.08)',
+      tickfont: { family: 'DM Mono', size: 11, color: '#64748b' },
+    },
+    yaxis: {
+      title: { text: 'NW Delta vs keeping current car (€)', font: { family: 'DM Sans', size: 12, color: '#94a3b8' } },
+      tickformat: ',.0f',
+      zeroline: true, zerolinewidth: 1.5, zerolinecolor: 'rgba(255,255,255,0.2)',
+      gridcolor: 'rgba(255,255,255,0.05)',
+      tickfont: { family: 'DM Mono', size: 11, color: '#64748b' },
+    },
+    legend: {
+      font: { family: 'DM Sans', size: 10, color: '#cbd5e1' },
+      bgcolor: 'rgba(13,27,42,0.85)',
+      bordercolor: 'rgba(255,255,255,0.1)', borderwidth: 1,
+      groupclick: 'toggleitem',
+    },
+    hovermode: 'x unified',
+    plot_bgcolor:  'transparent',
+    paper_bgcolor: 'transparent',
+    margin: { t: 14, b: 54, l: 90, r: 18 },
+    height: 470,
+    hoverlabel: {
+      bgcolor: '#0d1b2a', bordercolor: '#f59e0b',
+      font: { family: 'DM Mono', color: '#e2e8f0', size: 12 },
+    },
+  }, { responsive: true, displaylogo: false });
+
+  // ── SUMMARY TABLE ─────────────────────────────────────
+  if (rows.length) {
+    const tbody = document.getElementById('tbl-body');
+    tbody.innerHTML = rows.map(r => {
+      const fmt = v => {
+        const abs = Math.abs(Math.round(v));
+        return (v >= 0 ? '+€' : '−€') + abs.toLocaleString('pt-PT');
+      };
+      const beClass = be => {
+        const yr = parseInt(be);
+        if (isNaN(yr))    return 'be-never';
+        if (yr <= 4)      return 'be-early';
+        if (yr <= 7)      return 'be-mid';
+        return 'be-late';
+      };
+      return `<tr>
+        <td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${r.color};margin-right:8px;vertical-align:middle;"></span>${r.car}</td>
+        <td>${r.scenario}</td>
+        <td><span class="be-pill ${beClass(r.breakeven)}">${r.breakeven}</span></td>
+        <td class="mono ${r.yr5  >= 0 ? 'pos' : 'neg'}">${fmt(r.yr5)}</td>
+        <td class="mono ${r.yr10 >= 0 ? 'pos' : 'neg'}">${fmt(r.yr10)}</td>
+      </tr>`;
+    }).join('');
+    document.getElementById('summary-card').style.display = '';
+  }
+
+  document.getElementById('notes-div').style.display = '';
+}
+
+// ═══════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', () => {
+  renderCarList();
+  updateInvLabel();
+
+  // Live-update investment label on return input change
+  document.getElementById('qdveReturn').addEventListener('input', updateInvLabel);
+  document.getElementById('otherReturn').addEventListener('input', updateInvLabel);
+  document.getElementById('otherName').addEventListener('input', updateInvLabel);
+});
+</script>
 </body>
 </html>
