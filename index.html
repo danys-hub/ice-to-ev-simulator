@@ -274,7 +274,7 @@ function generate() {
     inflation: 0.022,
     publicPct: document.getElementById('publicType').value === 'percent'
   ? (parseFloat(document.getElementById('publicAmount').value) || 12) / 100
-  : (parseFloat(document.getElementById('publicAmount').value) || 1500) / mileage,,
+  : (parseFloat(document.getElementById('publicAmount').value) || 1500) / mileage,
     publicKwh: parseFloat(document.getElementById('publicKwh').value) || 0.55,
     homeRate: 0.16,
     grossReturn: parseFloat(document.getElementById('grossReturn').value) / 100 || 0.12,
