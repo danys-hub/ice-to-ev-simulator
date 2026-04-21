@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>EV vs Mercedes — Portugal 2026 (Accurate Data)</title>
+  <title>EV vs Current Vehicle — Portugal 2026</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
   <style>
@@ -14,7 +14,7 @@
     .brand{display:flex;align-items:center;gap:10px}
     .brand-icon{width:32px;height:32px;background:var(--blue);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;color:white}
     .brand-text h1{font-size:0.95rem;font-weight:600;color:var(--gray-900)}
-    .layout{display:grid;grid-template-columns:320px 1fr;min-height:calc(100vh - 56px);max-width:1400px;margin:0 auto}
+    .layout{display:grid;grid-template-columns:340px 1fr;min-height:calc(100vh - 56px);max-width:1400px;margin:0 auto}
     aside{background:var(--white);border-right:1px solid var(--gray-200);overflow-y:auto}
     .section{border-bottom:1px solid var(--gray-100)}
     .section-toggle{width:100%;display:flex;align-items:center;justify-content:space-between;padding:13px 16px;background:none;border:none;cursor:pointer;font-size:0.78rem;font-weight:600;color:var(--gray-700)}
@@ -23,7 +23,7 @@
     .field{margin-bottom:10px}
     .field label{display:block;font-size:0.72rem;font-weight:500;color:var(--gray-600);margin-bottom:4px}
     .field input{width:100%;background:var(--white);border:1px solid var(--gray-300);border-radius:6px;padding:7px 10px;font-family:'JetBrains Mono',monospace;font-size:0.8rem}
-    .gen-btn{position:fixed;bottom:20px;right:20px;z-index:1000;width:220px;padding:14px;background:#2563eb;color:white;border:none;border-radius:8px;font-weight:600;cursor:pointer;box-shadow:0 4px 12px rgba(37,99,235,.3)}
+    .gen-btn{position:fixed;bottom:20px;right:20px;z-index:1000;width:240px;padding:14px;background:#2563eb;color:white;border:none;border-radius:8px;font-weight:600;cursor:pointer;box-shadow:0 4px 12px rgba(37,99,235,.3)}
     #chart-div{min-height:520px}
     table{width:100%;border-collapse:collapse}
     th,td{padding:10px 16px;border-bottom:1px solid #e5e7eb;text-align:left;cursor:pointer}
@@ -38,27 +38,55 @@
 <header>
   <div class="brand">
     <div class="brand-icon">⚡</div>
-    <div class="brand-text"><h1>EV vs Mercedes</h1><p>Portugal 2026 — Accurate Data</p></div>
+    <div class="brand-text"><h1>EV vs Current Vehicle</h1><p>Portugal 2026 — Accurate Data</p></div>
   </div>
 </header>
 
 <div class="layout">
 
 <aside>
-  <!-- Current Mercedes -->
+  <!-- Current Vehicle -->
   <div class="section">
-    <button class="section-toggle open" onclick="this.nextElementSibling.classList.toggle('open')">Current Mercedes (Baseline)</button>
+    <button class="section-toggle open" onclick="this.nextElementSibling.classList.toggle('open')">Current Vehicle (Baseline)</button>
     <div class="section-body open">
       <div class="field"><label>Sale price today (€)</label><input id="S" type="number" value="5000"></div>
-      <div class="field"><label>Annual running cost year 0 (€/yr)</label><input id="R_base" type="number" value="4522"></div>
+      <div class="field"><label>Total annual running cost year 0 (€/yr) — or use breakdown below</label><input id="R_base" type="number" value="4522"></div>
+      <div style="font-size:0.7rem;color:#6b7280;margin-bottom:8px">Breakdown (optional — total will be sum):</div>
+      <div class="field"><label>Fuel (€/yr)</label><input id="currentFuel" type="number" value="2200"></div>
+      <div class="field"><label>IUC (€/yr)</label><input id="currentIUC" type="number" value="250"></div>
+      <div class="field"><label>Insurance (€/yr)</label><input id="currentInsurance" type="number" value="620"></div>
+      <div class="field"><label>Maintenance (€/yr)</label><input id="currentMaint" type="number" value="400"></div>
+      <div class="field"><label>Repairs/Issues (€/yr)</label><input id="currentIssues" type="number" value="452"></div>
+      <div class="field"><label>Tyres + Brakes (€/yr)</label><input id="currentTyresBrakes" type="number" value="600"></div>
     </div>
   </div>
 
   <!-- Investment -->
   <div class="section">
-    <button class="section-toggle open" onclick="this.nextElementSibling.classList.toggle('open')">Investment (QDVE)</button>
+    <button class="section-toggle open" onclick="this.nextElementSibling.classList.toggle('open')">Investment</button>
     <div class="section-body open">
+      <label style="display:flex;align-items:center;gap:8px">
+        <input type="checkbox" id="investToggle" checked onchange="generate()">
+        <span>Invest savings in QDVE</span>
+      </label>
       <div class="field"><label>Gross annual return (%)</label><input id="grossReturn" type="number" value="12" step="0.5"></div>
+    </div>
+  </div>
+
+  <!-- Mileage & Fuel -->
+  <div class="section">
+    <button class="section-toggle open" onclick="this.nextElementSibling.classList.toggle('open')">Mileage & Fuel Prices</button>
+    <div class="section-body open">
+      <div class="field">
+        <label>Annual distance</label>
+        <input id="mileage" type="number" value="15000" style="width:70%">
+        <select id="mileageUnit" onchange="generate()">
+          <option value="km">km</option>
+          <option value="miles">miles</option>
+        </select>
+      </div>
+      <div class="field"><label>Current vehicle fuel price (€/liter)</label><input id="currentFuelPrice" type="number" value="1.65" step="0.01"></div>
+      <div class="field"><label>EV home electricity rate (€/kWh)</label><input id="homeRate" type="number" value="0.16" step="0.01"></div>
     </div>
   </div>
 
@@ -68,8 +96,15 @@
     <div class="section-body open">
       <div class="field"><label>Home charger + install (€)</label><input id="charger" type="number" value="1100"></div>
       <div class="field"><label>Registration / stamp duty (€)</label><input id="registration" type="number" value="200"></div>
-      <div class="field"><label>Public charging (% of km)</label><input id="publicPct" type="number" value="12"></div>
-      <div class="field"><label>Public rate (€/kWh)</label><input id="publicKwh" type="number" value="0.55"></div>
+      <div class="field">
+        <label>Public charging</label>
+        <input id="publicAmount" type="number" value="1500" style="width:60%">
+        <select id="publicType" onchange="generate()">
+          <option value="km">absolute km</option>
+          <option value="percent"> % of total km</option>
+        </select>
+      </div>
+      <div class="field"><label>Public rate (€/kWh)</label><input id="publicKwh" type="number" value="0.55" step="0.01"></div>
     </div>
   </div>
 
@@ -84,7 +119,7 @@
   <div id="chart-div"></div>
 
   <div id="summary-card" style="display:none;margin-top:20px">
-    <h3>Summary Table — Alt3 (Cash + Reinvest)</h3>
+    <h3 id="table-title">Summary Table — Pay with Cash + Invest</h3>
     <table id="tbl-body" style="width:100%;border-collapse:collapse">
       <thead>
         <tr>
@@ -105,35 +140,23 @@
 <button onclick="generate()" class="gen-btn">⚡ Generate / Update Chart</button>
 
 <script>
-// ====================== FULL ACCURATE 2026 PORTUGAL DATA (IUC = 0 €) ======================
+// ====================== ACCURATE 2026 PORTUGAL DATA ======================
 const CAR_DB = [
-  {id:0,name:"MG4 Standard 51kWh (LFP)",P:17200,fuel:470,iuc:0,insurance:550,maint:300,issues:210,residual10:5700,degrad:0.016,
-   details:"Cheapest landed: €14 850 (AutoScout24 NL) + €1 200 import = €17 200. Source: AutoScout24 Apr 2026<br><br>Common PT issues: suspension clunk on bad roads (€400–600), 12V drain"},
-  {id:1,name:"MG4 Long Range 64kWh",P:20200,fuel:430,iuc:0,insurance:570,maint:300,issues:190,residual10:6500,degrad:0.016,
-   details:"Cheapest landed: €18 637 (AutoScout24) + €1 200 = €20 200. Source: AutoScout24 Apr 2026"},
-  {id:2,name:"VW ID.3 58kWh",P:24000,fuel:490,iuc:0,insurance:600,maint:340,issues:220,residual10:6500,degrad:0.023,
-   details:"Cheapest local: €24 000 (Standvirtual). Source: Standvirtual Apr 2026<br>Common issues: software/heat-pump (€800 out of warranty)"},
-  {id:3,name:"VW ID.3 77kWh Pro S",P:26000,fuel:450,iuc:0,insurance:620,maint:340,issues:200,residual10:8300,degrad:0.023,
-   details:"Cheapest: €26 000. Source: AutoScout24 Apr 2026"},
-  {id:4,name:"Tesla Model 3 LFP pre-Highland",P:32000,fuel:360,iuc:0,insurance:720,maint:280,issues:220,residual10:10900,degrad:0.016,
-   details:"Cheapest PT: €32 000. Source: Standvirtual Apr 2026"},
-  {id:5,name:"Nissan Leaf 62kWh",P:13500,fuel:430,iuc:0,insurance:540,maint:350,issues:300,residual10:4200,degrad:0.028,
-   details:"Cheapest: €13 500 (Standvirtual PT). Source: Standvirtual Apr 2026<br>High degradation risk (no active thermal management)"},
-  {id:6,name:"Renault Zoe",P:10000,fuel:410,iuc:0,insurance:480,maint:300,issues:270,residual10:3000,degrad:0.025,
-   details:"Cheapest: €10 000 (Standvirtual/OLX). Source: Standvirtual Apr 2026"},
-  {id:7,name:"Skoda Enyaq 58/60 kWh",P:24000,fuel:520,iuc:0,insurance:680,maint:320,issues:200,residual10:8000,degrad:0.023,
-   details:"Cheapest: €24 000 (Standvirtual/AutoScout24). Source: Standvirtual Apr 2026<br>Spacious SUV, good for holidays"},
-  {id:8,name:"Skoda Enyaq 77/82 kWh",P:27000,fuel:480,iuc:0,insurance:700,maint:320,issues:190,residual10:9500,degrad:0.023,
-   details:"Cheapest: €27 000. Source: AutoScout24 Apr 2026"},
-  {id:9,name:"Hyundai Ioniq 5",P:28000,fuel:460,iuc:0,insurance:690,maint:310,issues:250,residual10:9000,degrad:0.020,
-   details:"Cheapest: €28 000 (Standvirtual). Source: Standvirtual Apr 2026<br><strong>ICCU failure risk (€3 800–4 000 repair if out of warranty)</strong>"},
-  {id:10,name:"Kia EV6",P:27000,fuel:455,iuc:0,insurance:680,maint:300,issues:240,residual10:9200,degrad:0.020,
-   details:"Cheapest: €27 000. Source: Standvirtual Apr 2026<br>ICCU issues similar to Ioniq 5"},
-  {id:11,name:"Renault Megane E-Tech",P:19500,fuel:440,iuc:0,insurance:520,maint:310,issues:180,residual10:6500,degrad:0.022,
-   details:"Cheapest: €19 500 (AutoScout24/Standvirtual). Source: AutoScout24 Apr 2026<br>Minor electronics/charging inconsistencies"}
+  {id:0,name:"MG4 Standard 51kWh (LFP)",P:17200,fuel:470,iuc:0,insurance:550,maint:300,issues:210,residual10:5700,degrad:0.016,details:"Cheapest landed: €14 850 (AutoScout24 NL) + €1 200 import = €17 200. Source: AutoScout24 Apr 2026"},
+  {id:1,name:"MG4 Long Range 64kWh",P:20200,fuel:430,iuc:0,insurance:570,maint:300,issues:190,residual10:6500,degrad:0.016,details:"Cheapest landed: €18 637 (AutoScout24) + €1 200 = €20 200. Source: AutoScout24 Apr 2026"},
+  {id:2,name:"VW ID.3 58kWh",P:24000,fuel:490,iuc:0,insurance:600,maint:340,issues:220,residual10:6500,degrad:0.023,details:"Cheapest local: €24 000 (Standvirtual). Source: Standvirtual Apr 2026"},
+  {id:3,name:"VW ID.3 77kWh Pro S",P:26000,fuel:450,iuc:0,insurance:620,maint:340,issues:200,residual10:8300,degrad:0.023,details:"Cheapest: €26 000. Source: AutoScout24 Apr 2026"},
+  {id:4,name:"Tesla Model 3 LFP pre-Highland",P:32000,fuel:360,iuc:0,insurance:720,maint:280,issues:220,residual10:10900,degrad:0.016,details:"Cheapest PT: €32 000. Source: Standvirtual Apr 2026"},
+  {id:5,name:"Nissan Leaf 62kWh",P:13500,fuel:430,iuc:0,insurance:540,maint:350,issues:300,residual10:4200,degrad:0.028,details:"Cheapest: €13 500 (Standvirtual PT). Source: Standvirtual Apr 2026"},
+  {id:6,name:"Renault Zoe R110/R135",P:10000,fuel:410,iuc:0,insurance:480,maint:300,issues:270,residual10:3000,degrad:0.025,details:"Cheapest: €10 000 (Standvirtual/OLX PT). Source: Standvirtual Apr 2026"},
+  {id:7,name:"Skoda Enyaq 58/60 kWh",P:24000,fuel:520,iuc:0,insurance:680,maint:320,issues:200,residual10:8000,degrad:0.023,details:"Cheapest: €24 000 (Standvirtual). Source: Standvirtual Apr 2026"},
+  {id:8,name:"Skoda Enyaq 77/82 kWh",P:27000,fuel:480,iuc:0,insurance:700,maint:320,issues:190,residual10:9500,degrad:0.023,details:"Cheapest: €27 000. Source: AutoScout24 Apr 2026"},
+  {id:9,name:"Hyundai Ioniq 5",P:28000,fuel:460,iuc:0,insurance:690,maint:310,issues:250,residual10:9000,degrad:0.020,details:"Cheapest: €28 000 (Standvirtual). Source: Standvirtual Apr 2026"},
+  {id:10,name:"Kia EV6",P:27000,fuel:455,iuc:0,insurance:680,maint:300,issues:240,residual10:9200,degrad:0.020,details:"Cheapest: €27 000. Source: Standvirtual Apr 2026"},
+  {id:11,name:"Renault Megane E-Tech",P:19500,fuel:440,iuc:0,insurance:520,maint:310,issues:180,residual10:6500,degrad:0.022,details:"Cheapest: €19 500 (AutoScout24/Standvirtual). Source: AutoScout24 Apr 2026"}
 ];
 
-let selectedCars = new Set([0,1,2,3,4,5,6,7,8,9,10,11]);
+let selectedCars = new Set([0,2,4,7]);
 
 // ====================== MODEL ======================
 function residualAtYear(P, r10, t) {
@@ -141,33 +164,40 @@ function residualAtYear(P, r10, t) {
   return P - (P - r10) * Math.pow(t / 10, 1.6);
 }
 
-function simulateCar(car, params) {
-  const {S, R_base, mercRes10, charger, registration, inflation, publicPct, publicKwh, homeRate, grossReturn, CGT} = params;
+function simulateCar(car, params, investEnabled) {
+  const {S, R_base, mercRes10, charger, registration, inflation, publicPct, publicKwh, homeRate, grossReturn, CGT, mileage} = params;
   const P = car.P;
   const D = Math.max(P + charger + registration - S, 0);
 
   const savings = [0];
   const resDelta = [P - S];
 
+  const scale = mileage / 15000;   // scale fuel/elec costs to new mileage
+
   for (let t = 1; t <= 10; t++) {
     const infl = Math.pow(1 + inflation, t);
     const ageEV = 1 + 0.08 * t;
     const blend = (1 - publicPct) + publicPct * (publicKwh / homeRate);
-    const fuel = car.fuel * (1 + car.degrad * t) * blend * infl;
+    const fuel = car.fuel * (1 + car.degrad * t) * blend * infl * scale;
     const other = (car.iuc + car.insurance + car.maint * ageEV + car.issues * ageEV) * infl;
     const evCost = fuel + other;
-    const mercCost = R_base * infl * (1 + 0.12 * t);
+    const mercCost = R_base * infl * (1 + 0.12 * t) * scale;
     savings.push(mercCost - evCost);
     resDelta.push(residualAtYear(P, car.residual10, t) - residualAtYear(S, mercRes10, t));
   }
 
   const alt3 = new Array(11).fill(0);
-  let q = -D;
+  let q = investEnabled ? -D : 0;   // upfront withdrawal only if investing
   alt3[0] = 0;
   for (let t = 1; t <= 10; t++) {
-    q = q * (1 + grossReturn) + savings[t];
+    const ncf = savings[t];
+    if (investEnabled) {
+      q = q * (1 + grossReturn) + ncf;
+    } else {
+      q += ncf;
+    }
     let nw = q + resDelta[t];
-    if (t === 10) nw -= Math.max(0, q + D) * CGT;
+    if (t === 10 && investEnabled) nw -= Math.max(0, q + D) * CGT;
     alt3[t] = Math.round(nw);
   }
   return alt3;
@@ -188,7 +218,7 @@ function renderCarList() {
         <button onclick="toggleDetails(${car.id});event.stopImmediatePropagation()" style="margin-left:28px;font-size:0.7rem;color:#2563eb;background:none;border:none;cursor:pointer">Details ▼</button>
         <div id="detail-${car.id}" class="car-detail" style="display:none">
           ${car.details}<br><br>
-          <strong>Annual costs breakdown (year 0):</strong><br>
+          <strong>Annual costs breakdown (year 0 at 15 000 km):</strong><br>
           • Fuel/Electricity: €${car.fuel}<br>
           • IUC: €${car.iuc} (0 € for EVs)<br>
           • Insurance: €${car.insurance}<br>
@@ -215,6 +245,12 @@ function toggleDetails(id) {
 
 // ====================== GENERATE ======================
 function generate() {
+  const mileageKm = parseFloat(document.getElementById('mileage').value) || 15000;
+  const unit = document.getElementById('mileageUnit').value;
+  const mileage = unit === 'miles' ? mileageKm * 1.60934 : mileageKm;
+
+  const investEnabled = document.getElementById('investToggle').checked;
+
   const params = {
     S: parseFloat(document.getElementById('S').value) || 5000,
     R_base: parseFloat(document.getElementById('R_base').value) || 4522,
@@ -226,39 +262,43 @@ function generate() {
     publicKwh: parseFloat(document.getElementById('publicKwh').value) || 0.55,
     homeRate: 0.16,
     grossReturn: parseFloat(document.getElementById('grossReturn').value) / 100 || 0.12,
-    CGT: 0.28
+    CGT: 0.28,
+    mileage: mileage
   };
 
   const traces = [];
   const YEARS = Array.from({length:11}, (_,i) => i);
 
-  traces.push({x:YEARS, y:new Array(11).fill(0), name:'Baseline — Keep Mercedes', line:{color:'#6b7280', dash:'dash', width:4}});
+  traces.push({x:YEARS, y:new Array(11).fill(0), name:'Baseline — Keep Current Vehicle', line:{color:'#6b7280', dash:'dash', width:4}});
 
   Array.from(selectedCars).forEach(id => {
     const car = CAR_DB.find(c => c.id === id);
     if (!car) return;
     const color = ['#2563eb','#10b981','#dc2626','#d97706','#7c3aed'][id % 5];
-    const alt3 = simulateCar(car, params);
+    const alt3 = simulateCar(car, params, investEnabled);
     traces.push({x:YEARS, y:alt3, name:car.name, line:{color:color, width:2.5}});
   });
 
   Plotly.newPlot('chart-div', traces, {
-    title: 'Net Worth Delta vs Keeping Mercedes (Portugal 2026)',
+    title: 'Net Worth Delta vs Keeping Current Vehicle (Portugal 2026)',
     xaxis: {title: 'Years'},
     yaxis: {title: '€ Delta (positive = richer)'},
     hovermode: 'x unified',
     height: 520
   }, {responsive: true});
 
+  // Update table title
+  document.getElementById('table-title').textContent = investEnabled ? "Summary Table — Pay with Cash + Invest" : "Summary Table — Pay with Cash";
+
   const tbody = document.getElementById('tbl-body');
   tbody.innerHTML = Array.from(selectedCars).map(id => {
     const car = CAR_DB.find(c => c.id === id);
-    const alt3 = simulateCar(car, params);
+    const alt3 = simulateCar(car, params, investEnabled);
     const delta10 = alt3[10];
     const beYear = alt3.findIndex((v, i) => i > 0 && v > 0);
     return `<tr>
       <td>${car.name}</td>
-      <td>Alt3</td>
+      <td>${investEnabled ? 'Pay with Cash + Invest' : 'Pay with Cash'}</td>
       <td>${beYear > 0 ? 'Year '+beYear : 'Never'}</td>
       <td class="${delta10>=0?'pos':'neg'}">${delta10>=0?'+' : ''}€${Math.round(alt3[5]).toLocaleString('pt-PT')}</td>
       <td class="${delta10>=0?'pos':'neg'}">${delta10>=0?'+' : ''}€${Math.round(delta10).toLocaleString('pt-PT')}</td>
@@ -266,7 +306,7 @@ function generate() {
   }).join('');
 
   document.getElementById('summary-card').style.display = 'block';
-};
+}
 
 // Sort table
 function sortTable(n) {
@@ -281,6 +321,7 @@ function sortTable(n) {
   rows.forEach(row => table.appendChild(row));
 }
 
+// Init
 window.onload = () => {
   renderCarList();
   generate();
