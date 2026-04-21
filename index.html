@@ -31,6 +31,7 @@
     .pos{color:#16a34a}
     .neg{color:#dc2626}
     .car-detail{background:#f9fafb;padding:12px;border-top:1px solid #e5e7eb;font-size:0.75rem;line-height:1.5}
+    .breakdown {display:none}
   </style>
 </head>
 <body>
@@ -50,14 +51,25 @@
     <button class="section-toggle open" onclick="this.nextElementSibling.classList.toggle('open')">Current Vehicle (Baseline)</button>
     <div class="section-body open">
       <div class="field"><label>Sale price today (€)</label><input id="S" type="number" value="5000"></div>
-      <div class="field"><label>Total annual running cost year 0 (€/yr) — or use breakdown below</label><input id="R_base" type="number" value="4522"></div>
-      <div style="font-size:0.7rem;color:#6b7280;margin-bottom:8px">Breakdown (optional — total will be sum):</div>
-      <div class="field"><label>Fuel (€/yr)</label><input id="currentFuel" type="number" value="2200"></div>
-      <div class="field"><label>IUC (€/yr)</label><input id="currentIUC" type="number" value="250"></div>
-      <div class="field"><label>Insurance (€/yr)</label><input id="currentInsurance" type="number" value="620"></div>
-      <div class="field"><label>Maintenance (€/yr)</label><input id="currentMaint" type="number" value="400"></div>
-      <div class="field"><label>Repairs/Issues (€/yr)</label><input id="currentIssues" type="number" value="452"></div>
-      <div class="field"><label>Tyres + Brakes (€/yr)</label><input id="currentTyresBrakes" type="number" value="600"></div>
+      
+      <label style="display:flex;align-items:center;gap:8px;margin:12px 0">
+        <input type="checkbox" id="useBreakdown" checked onchange="toggleBreakdown()">
+        <span>Use detailed cost breakdown</span>
+      </label>
+
+      <!-- Total (always visible) -->
+      <div class="field"><label>Total annual running cost year 0 (€/yr)</label><input id="R_base" type="number" value="4522"></div>
+
+      <!-- Breakdown (toggleable) -->
+      <div id="breakdownFields" class="breakdown">
+        <div style="font-size:0.7rem;color:#6b7280;margin-bottom:8px">Breakdown fields — total will be updated automatically</div>
+        <div class="field"><label>Fuel (€/yr)</label><input id="currentFuel" type="number" value="2200" oninput="updateTotal()"></div>
+        <div class="field"><label>IUC (€/yr)</label><input id="currentIUC" type="number" value="250" oninput="updateTotal()"></div>
+        <div class="field"><label>Insurance (€/yr)</label><input id="currentInsurance" type="number" value="620" oninput="updateTotal()"></div>
+        <div class="field"><label>Maintenance (€/yr)</label><input id="currentMaint" type="number" value="400" oninput="updateTotal()"></div>
+        <div class="field"><label>Repairs/Issues (€/yr)</label><input id="currentIssues" type="number" value="452" oninput="updateTotal()"></div>
+        <div class="field"><label>Tyres + Brakes (€/yr)</label><input id="currentTyresBrakes" type="number" value="600" oninput="updateTotal()"></div>
+      </div>
     </div>
   </div>
 
@@ -101,7 +113,7 @@
         <input id="publicAmount" type="number" value="1500" style="width:60%">
         <select id="publicType" onchange="generate()">
           <option value="km">absolute km</option>
-          <option value="percent"> % of total km</option>
+          <option value="percent">% of total km</option>
         </select>
       </div>
       <div class="field"><label>Public rate (€/kWh)</label><input id="publicKwh" type="number" value="0.55" step="0.01"></div>
@@ -140,20 +152,32 @@
 <button onclick="generate()" class="gen-btn">⚡ Generate / Update Chart</button>
 
 <script>
-// ====================== ACCURATE 2026 PORTUGAL DATA ======================
+// ====================== CAR DATABASE (accurate 2026 PT) ======================
 const CAR_DB = [
-  {id:0,name:"MG4 Standard 51kWh (LFP)",P:17200,fuel:470,iuc:0,insurance:550,maint:300,issues:210,residual10:5700,degrad:0.016,details:"Cheapest landed: €14 850 (AutoScout24 NL) + €1 200 import = €17 200. Source: AutoScout24 Apr 2026"},
-  {id:1,name:"MG4 Long Range 64kWh",P:20200,fuel:430,iuc:0,insurance:570,maint:300,issues:190,residual10:6500,degrad:0.016,details:"Cheapest landed: €18 637 (AutoScout24) + €1 200 = €20 200. Source: AutoScout24 Apr 2026"},
-  {id:2,name:"VW ID.3 58kWh",P:24000,fuel:490,iuc:0,insurance:600,maint:340,issues:220,residual10:6500,degrad:0.023,details:"Cheapest local: €24 000 (Standvirtual). Source: Standvirtual Apr 2026"},
-  {id:3,name:"VW ID.3 77kWh Pro S",P:26000,fuel:450,iuc:0,insurance:620,maint:340,issues:200,residual10:8300,degrad:0.023,details:"Cheapest: €26 000. Source: AutoScout24 Apr 2026"},
-  {id:4,name:"Tesla Model 3 LFP pre-Highland",P:32000,fuel:360,iuc:0,insurance:720,maint:280,issues:220,residual10:10900,degrad:0.016,details:"Cheapest PT: €32 000. Source: Standvirtual Apr 2026"},
-  {id:5,name:"Nissan Leaf 62kWh",P:13500,fuel:430,iuc:0,insurance:540,maint:350,issues:300,residual10:4200,degrad:0.028,details:"Cheapest: €13 500 (Standvirtual PT). Source: Standvirtual Apr 2026"},
-  {id:6,name:"Renault Zoe R110/R135",P:10000,fuel:410,iuc:0,insurance:480,maint:300,issues:270,residual10:3000,degrad:0.025,details:"Cheapest: €10 000 (Standvirtual/OLX PT). Source: Standvirtual Apr 2026"},
-  {id:7,name:"Skoda Enyaq 58/60 kWh",P:24000,fuel:520,iuc:0,insurance:680,maint:320,issues:200,residual10:8000,degrad:0.023,details:"Cheapest: €24 000 (Standvirtual). Source: Standvirtual Apr 2026"},
-  {id:8,name:"Skoda Enyaq 77/82 kWh",P:27000,fuel:480,iuc:0,insurance:700,maint:320,issues:190,residual10:9500,degrad:0.023,details:"Cheapest: €27 000. Source: AutoScout24 Apr 2026"},
-  {id:9,name:"Hyundai Ioniq 5",P:28000,fuel:460,iuc:0,insurance:690,maint:310,issues:250,residual10:9000,degrad:0.020,details:"Cheapest: €28 000 (Standvirtual). Source: Standvirtual Apr 2026"},
-  {id:10,name:"Kia EV6",P:27000,fuel:455,iuc:0,insurance:680,maint:300,issues:240,residual10:9200,degrad:0.020,details:"Cheapest: €27 000. Source: Standvirtual Apr 2026"},
-  {id:11,name:"Renault Megane E-Tech",P:19500,fuel:440,iuc:0,insurance:520,maint:310,issues:180,residual10:6500,degrad:0.022,details:"Cheapest: €19 500 (AutoScout24/Standvirtual). Source: AutoScout24 Apr 2026"}
+  {id:0,name:"MG4 Standard 51kWh (LFP)",P:17200,fuel:470,iuc:0,insurance:550,maint:300,issues:210,residual10:5700,degrad:0.016,
+   details:"Cheapest landed: €14 850 (AutoScout24 NL) + €1 200 import = €17 200. Source: AutoScout24 Apr 2026"},
+  {id:1,name:"MG4 Long Range 64kWh",P:20200,fuel:430,iuc:0,insurance:570,maint:300,issues:190,residual10:6500,degrad:0.016,
+   details:"Cheapest landed: €18 637 (AutoScout24) + €1 200 = €20 200. Source: AutoScout24 Apr 2026"},
+  {id:2,name:"VW ID.3 58kWh",P:24000,fuel:490,iuc:0,insurance:600,maint:340,issues:220,residual10:6500,degrad:0.023,
+   details:"Cheapest local: €24 000 (Standvirtual). Source: Standvirtual Apr 2026"},
+  {id:3,name:"VW ID.3 77kWh Pro S",P:26000,fuel:450,iuc:0,insurance:620,maint:340,issues:200,residual10:8300,degrad:0.023,
+   details:"Cheapest: €26 000. Source: AutoScout24 Apr 2026"},
+  {id:4,name:"Tesla Model 3 LFP pre-Highland",P:32000,fuel:360,iuc:0,insurance:720,maint:280,issues:220,residual10:10900,degrad:0.016,
+   details:"Cheapest PT: €32 000. Source: Standvirtual Apr 2026"},
+  {id:5,name:"Nissan Leaf 62kWh",P:13500,fuel:430,iuc:0,insurance:540,maint:350,issues:300,residual10:4200,degrad:0.028,
+   details:"Cheapest: €13 500 (Standvirtual PT). Source: Standvirtual Apr 2026"},
+  {id:6,name:"Renault Zoe R110/R135",P:10000,fuel:410,iuc:0,insurance:480,maint:300,issues:270,residual10:3000,degrad:0.025,
+   details:"Cheapest: €10 000 (Standvirtual/OLX PT). Source: Standvirtual Apr 2026"},
+  {id:7,name:"Skoda Enyaq 58/60 kWh",P:24000,fuel:520,iuc:0,insurance:680,maint:320,issues:200,residual10:8000,degrad:0.023,
+   details:"Cheapest: €24 000 (Standvirtual). Source: Standvirtual Apr 2026"},
+  {id:8,name:"Skoda Enyaq 77/82 kWh",P:27000,fuel:480,iuc:0,insurance:700,maint:320,issues:190,residual10:9500,degrad:0.023,
+   details:"Cheapest: €27 000. Source: AutoScout24 Apr 2026"},
+  {id:9,name:"Hyundai Ioniq 5",P:28000,fuel:460,iuc:0,insurance:690,maint:310,issues:250,residual10:9000,degrad:0.020,
+   details:"Cheapest: €28 000 (Standvirtual). Source: Standvirtual Apr 2026"},
+  {id:10,name:"Kia EV6",P:27000,fuel:455,iuc:0,insurance:680,maint:300,issues:240,residual10:9200,degrad:0.020,
+   details:"Cheapest: €27 000. Source: Standvirtual Apr 2026"},
+  {id:11,name:"Renault Megane E-Tech",P:19500,fuel:440,iuc:0,insurance:520,maint:310,issues:180,residual10:6500,degrad:0.022,
+   details:"Cheapest: €19 500 (AutoScout24/Standvirtual). Source: AutoScout24 Apr 2026"}
 ];
 
 let selectedCars = new Set([0,2,4,7]);
@@ -172,7 +196,7 @@ function simulateCar(car, params, investEnabled) {
   const savings = [0];
   const resDelta = [P - S];
 
-  const scale = mileage / 15000;   // scale fuel/elec costs to new mileage
+  const scale = mileage / 15000;
 
   for (let t = 1; t <= 10; t++) {
     const infl = Math.pow(1 + inflation, t);
@@ -187,7 +211,7 @@ function simulateCar(car, params, investEnabled) {
   }
 
   const alt3 = new Array(11).fill(0);
-  let q = investEnabled ? -D : 0;   // upfront withdrawal only if investing
+  let q = investEnabled ? -D : 0;
   alt3[0] = 0;
   for (let t = 1; t <= 10; t++) {
     const ncf = savings[t];
@@ -203,7 +227,7 @@ function simulateCar(car, params, investEnabled) {
   return alt3;
 }
 
-// ====================== RENDER CAR LIST ======================
+// ====================== CAR LIST ======================
 function renderCarList() {
   const container = document.getElementById('car-list');
   container.innerHTML = CAR_DB.map(car => {
@@ -243,7 +267,26 @@ function toggleDetails(id) {
   el.style.display = el.style.display === 'none' ? 'block' : 'none';
 }
 
-// ====================== GENERATE ======================
+// ====================== BREAKDOWN TOGGLE ======================
+function toggleBreakdown() {
+  const enabled = document.getElementById('useBreakdown').checked;
+  document.getElementById('breakdownFields').style.display = enabled ? 'block' : 'none';
+  updateTotal();
+}
+
+function updateTotal() {
+  if (!document.getElementById('useBreakdown').checked) return;
+  const fuel = parseFloat(document.getElementById('currentFuel').value) || 0;
+  const iuc = parseFloat(document.getElementById('currentIUC').value) || 0;
+  const ins = parseFloat(document.getElementById('currentInsurance').value) || 0;
+  const maint = parseFloat(document.getElementById('currentMaint').value) || 0;
+  const issues = parseFloat(document.getElementById('currentIssues').value) || 0;
+  const tyres = parseFloat(document.getElementById('currentTyresBrakes').value) || 0;
+  const total = fuel + iuc + ins + maint + issues + tyres;
+  document.getElementById('R_base').value = Math.round(total);
+}
+
+// ====================== GENERATE (fully fixed) ======================
 function generate() {
   const mileageKm = parseFloat(document.getElementById('mileage').value) || 15000;
   const unit = document.getElementById('mileageUnit').value;
@@ -251,9 +294,15 @@ function generate() {
 
   const investEnabled = document.getElementById('investToggle').checked;
 
+  // Get R_base (total or breakdown sum)
+  let R_base = parseFloat(document.getElementById('R_base').value) || 4522;
+  if (document.getElementById('useBreakdown').checked) {
+    // Already updated by updateTotal()
+  }
+
   const params = {
     S: parseFloat(document.getElementById('S').value) || 5000,
-    R_base: parseFloat(document.getElementById('R_base').value) || 4522,
+    R_base: R_base,
     mercRes10: 1200,
     charger: parseFloat(document.getElementById('charger').value) || 1100,
     registration: parseFloat(document.getElementById('registration').value) || 200,
@@ -324,6 +373,7 @@ function sortTable(n) {
 // Init
 window.onload = () => {
   renderCarList();
+  toggleBreakdown(); // initial state
   generate();
 };
 </script>
