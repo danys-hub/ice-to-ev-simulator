@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EV vs Mercedes + QDVE • Portugal</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+    body { font-family: 'Inter', system-ui, sans-serif; }
+  </style>
+</head>
+<body class="bg-gray-50">
+  <div class="max-w-7xl mx-auto p-8">
+    <div class="flex justify-between items-center mb-8">
+      <div>
+        <h1 class="text-4xl font-semibold text-gray-900">🚗 EV vs Mercedes + QDVE</h1>
+        <p class="text-gray-600 mt-1">Simulação 10 anos – breakeven exato • Portugal</p>
+      </div>
+      <a href="https://github.com/teu-utilizador/ev-vs-mercedes-qdve" target="_blank"
+         class="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1">
+        <span>Ver no GitHub</span>
+      </a>
+    </div>
+
+    <!-- Controls -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div class="lg:col-span-4 bg-white rounded-3xl shadow p-8">
+        <h2 class="font-semibold text-lg mb-6">Parâmetros</h2>
+
+        <!-- Carros -->
+        <div class="mb-8">
+          <p class="text-sm font-medium text-gray-500 mb-3">Carros a comparar (baseline = Mercedes)</p>
+          <div id="car-list" class="space-y-2"></div>
+        </div>
+
+        <!-- Investimento -->
+        <div class="mb-8">
+          <label class="block text-sm font-medium text-gray-500 mb-2">Investimento do prémio EV</label>
+          <select id="inv-type" onchange="toggleInvestment()" class="w-full border border-gray-300 rounded-2xl px-4 py-3 text-sm">
+            <option value="qdve">QDVE (default)</option>
+            <option value="other">Outro investimento</option>
+          </select>
+          <div id="qdve-options" class="mt-4">
+            <label class="flex items-center gap-2 text-sm">
+              <input type="checkbox" id="conservative" checked class="w-4 h-4">
+              <span>Usar retorno conservador 12% (em vez de ~18% histórico)</span>
+            </label>
+          </div>
+          <div id="other-rate" class="hidden mt-4">
+            <label class="block text-sm text-gray-500 mb-1">Retorno anual esperado (%)</label>
+            <input type="number" id="custom-rate" value="12" step="0.1" class="w-full border border-gray-300 rounded-2xl px-4 py-3 text-sm">
+          </div>
+        </div>
+
+        <!-- Outros parâmetros -->
+        <div class="space-y-6">
+          <div>
+            <label class="block text-sm font-medium text-gray-500 mb-2">Anos de simulação</label>
+            <input type="range" id="years" min="5" max="15" value="10" class="w-full accent-blue-600">
+            <div class="flex justify-between text-xs text-gray-500 mt-1">
+              <span>5</span><span id="years-value" class="font-semibold text-gray-900">10</span><span>15</span>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-6">
+            <div>
+              <label class="block text-sm font-medium text-gray-500 mb-2">R_base Mercedes (%)</label>
+              <input type="range" id="rbase" min="70" max="130" value="100" class="w-full accent-blue-600">
+              <div class="text-center text-sm font-semibold text-gray-900" id="rbase-value">100%</div>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-500 mb-2">Combustível Mercedes (%)</label>
+              <input type="range" id="fuel" min="70" max="130" value="100" class="w-full accent-blue-600">
+              <div class="text-center text-sm font-semibold text-gray-900" id="fuel-value">100%</div>
+            </div>
+          </div>
+
+          <label class="flex items-center gap-3">
+            <input type="checkbox" id="cgt" checked class="w-5 h-5 accent-blue-600">
+            <span class="text-sm">Aplicar CGT 28% no final (realista)</span>
+          </label>
+        </div>
+
+        <button onclick="runSimulation()" 
+                class="mt-10 w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 rounded-3xl text-lg transition">
+          🚀 Gerar Simulação
+        </button>
+      </div>
+
+      <!-- Results -->
+      <div class="lg:col-span-8">
+        <div id="results" class="hidden">
+          <!-- Gráfico -->
+          <div class="bg-white rounded-3xl shadow p-6 mb-8">
+            <canvas id="chart" class="w-full" height="420"></canvas>
+          </div>
+
+          <!-- Tabela -->
+          <div class="bg-white rounded-3xl shadow p-6">
+            <h3 class="font-semibold mb-4">Resumo</h3>
+            <table id="summary-table" class="w-full text-sm"></table>
+          </div>
+
+          <button onclick="downloadCSV()" 
+                  class="mt-6 flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium">
+            📥 Download CSV completo
+          </button>
+        </div>
+
+        <div id="empty-state" class="bg-white rounded-3xl shadow p-12 text-center">
+          <p class="text-gray-400 text-xl">Seleciona os carros e clica em Gerar Simulação</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ==================== DADOS BASE (exatamente os mesmos do Streamlit) ====================
+    const baseline = {
+      name: "Mercedes C-Class (Baseline)",
+      running_costs: Array.from({length:15}, (_,i) => Math.round(4522 * Math.pow(1.02, i))),
+      fuel_costs:    Array.from({length:15}, (_,i) => Math.round(1800 * Math.pow(1.04, i))),
+      other_costs:   Array.from({length:15}, (_,i) => Math.round(2722 * Math.pow(1.02, i))),
+      residuals:     Array.from({length:15}, (_,i) => Math.round(35000 - i*2200))
+    };
+
+    const cars = {
+      "Tesla Model Y": {
+        running_costs: Array.from({length:15}, (_,i) => Math.round(1690 * Math.pow(1.02, i))),
+        residuals:     Array.from({length:15}, (_,i) => Math.round(52000 - i*2800)),
+        annual_loan_pmt: 3800,
+        initial_withdrawal: 8000
+      },
+      "VW ID.3": {
+        running_costs: Array.from({length:15}, (_,i) => Math.round(1750 * Math.pow(1.02, i))),
+        residuals:     Array.from({length:15}, (_,i) => Math.round(42000 - i*2600)),
+        annual_loan_pmt: 3600,
+        initial_withdrawal: 6000
+      },
+      "Hyundai Ioniq 5": {
+        running_costs: Array.from({length:15}, (_,i) => Math.round(1720 * Math.pow(1.02, i))),
+        residuals:     Array.from({length:15}, (_,i) => Math.round(48000 - i*2700)),
+        annual_loan_pmt: 3700,
+        initial_withdrawal: 7000
+      }
+    };
+
+    let chartInstance = null;
+
+    // ==================== RENDER CAR CHECKBOXES ====================
+    function renderCarList() {
+      const container = document.getElementById("car-list");
+      container.innerHTML = Object.keys(cars).map(name => `
+        <label class="flex items-center gap-3 cursor-pointer">
+          <input type="checkbox" value="${name}" class="car-checkbox w-5 h-5 accent-blue-600">
+          <span class="text-gray-700">${name}</span>
+        </label>
+      `).join("");
+    }
+
+    // ==================== TOGGLE INVESTMENT TYPE ====================
+    function toggleInvestment() {
+      const isQdve = document.getElementById("inv-type").value === "qdve";
+      document.getElementById("qdve-options").classList.toggle("hidden", !isQdve);
+      document.getElementById("other-rate").classList.toggle("hidden", isQdve);
+    }
+
+    // ==================== SIMULATION LOGIC (idêntica à versão corrigida) ====================
+    function simulateCar(carName, years, qdveRate, applyCgt, cgtRate, rBaseAdj, fuelAdj) {
+      const car = cars[carName];
+      const merFuelAdj = baseline.fuel_costs.slice(0, years).map(v => v * fuelAdj);
+      const merOtherAdj = baseline.other_costs.slice(0, years).map(v => v * rBaseAdj);
+      const adjMerRunning = merFuelAdj.map((f, i) => f + merOtherAdj[i]);
+
+      let qdve = -car.initial_withdrawal;
+      const portfolio = [qdve];
+      const nwDelta = [];
+      const residualDeltaSeries = [];
+
+      for (let t = 0; t < years; t++) {
+        const savings = adjMerRunning[t] - car.running_costs[t];
+        const netCf = savings - car.annual_loan_pmt;
+
+        qdve += netCf;
+        qdve *= (1 + qdveRate);
+        portfolio.push(qdve);
+
+        const resDelta = car.residuals[t] - baseline.residuals[t];
+        residualDeltaSeries.push(resDelta);
+
+        nwDelta.push(Math.round(qdve + resDelta));
+      }
+
+      // CGT só no último ano
+      let finalPortfolio = portfolio[portfolio.length - 1];
+      if (applyCgt && finalPortfolio > 0) {
+        const gain = finalPortfolio - car.initial_withdrawal;
+        const cgtAmount = Math.max(0, gain) * cgtRate;
+        finalPortfolio -= cgtAmount;
+        nwDelta[nwDelta.length - 1] = Math.round(finalPortfolio + residualDeltaSeries[residualDeltaSeries.length - 1]);
+      }
+
+      // Breakeven
+      let breakeven = null;
+      for (let i = 0; i < nwDelta.length; i++) {
+        if (nwDelta[i] >= 0) {
+          breakeven = i + 1;
+          break;
+        }
+      }
+
+      return {
+        name: carName,
+        nwDelta,
+        breakeven: breakeven || `Nunca (${years} anos)`,
+        finalDelta: nwDelta[nwDelta.length - 1]
+      };
+    }
+
+    // ==================== RUN SIMULATION ====================
+    function runSimulation() {
+      const selected = Array.from(document.querySelectorAll(".car-checkbox:checked")).map(cb => cb.value);
+      if (selected.length === 0) {
+        alert("Seleciona pelo menos um carro!");
+        return;
+      }
+
+      const years = parseInt(document.getElementById("years").value);
+      const isQdve = document.getElementById("inv-type").value === "qdve";
+      let rate = isQdve 
+        ? (document.getElementById("conservative").checked ? 0.12 : 0.18)
+        : parseFloat(document.getElementById("custom-rate").value) / 100;
+
+      const applyCgt = document.getElementById("cgt").checked;
+      const rBaseAdj = parseFloat(document.getElementById("rbase").value) / 100;
+      const fuelAdj = parseFloat(document.getElementById("fuel").value) / 100;
+
+      const results = selected.map(car => simulateCar(car, years, rate, applyCgt, 0.28, rBaseAdj, fuelAdj));
+
+      // Mostrar resultados
+      document.getElementById("empty-state").classList.add("hidden");
+      document.getElementById("results").classList.remove("hidden");
+
+      // Gráfico
+      const ctx = document.getElementById("chart");
+      if (chartInstance) chartInstance.destroy();
+      
+      chartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: Array.from({length: years}, (_, i) => i + 1),
+          datasets: results.map((r, i) => ({
+            label: r.name,
+            data: r.nwDelta,
+            borderColor: `hsl(${i * 80}, 80%, 60%)`,
+            tension: 0.3,
+            borderWidth: 3,
+            pointRadius: 4
+          }))
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { position: 'top' } },
+          scales: {
+            y: { title: { display: true, text: 'Vantagem Patrimonial (€)' } },
+            x: { title: { display: true, text: 'Ano' } }
+          }
+        }
+      });
+
+      // Tabela
+      const tbody = document.getElementById("summary-table");
+      tbody.innerHTML = `
+        <thead>
+          <tr class="border-b text-left text-xs uppercase text-gray-500">
+            <th class="pb-3">Carro</th>
+            <th class="pb-3 text-right">Breakeven</th>
+            <th class="pb-3 text-right">Vantagem final (${years} anos)</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${results.map(r => `
+            <tr class="border-b last:border-0">
+              <td class="py-4 font-medium">${r.name}</td>
+              <td class="py-4 text-right">${r.breakeven}</td>
+              <td class="py-4 text-right font-semibold ${r.finalDelta >= 0 ? 'text-green-600' : 'text-red-600'}">
+                ${r.finalDelta.toLocaleString('pt-PT')} €
+              </td>
+            </tr>
+          `).join("")}
+        </tbody>
+      `;
+
+      // Guardar resultados para download
+      window.lastResults = { results, years, selected };
+    }
+
+    // ==================== DOWNLOAD CSV ====================
+    function downloadCSV() {
+      if (!window.lastResults) return;
+      const { results, years } = window.lastResults;
+      
+      let csv = "Ano," + results.map(r => r.name).join(",") + "\n";
+      for (let y = 0; y < years; y++) {
+        csv += (y + 1) + "," + results.map(r => r.nwDelta[y]).join(",") + "\n";
+      }
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "simulacao_ev_vs_mercedes.csv";
+      a.click();
+    }
+
+    // ==================== INIT ====================
+    function init() {
+      renderCarList();
+      document.getElementById("years").addEventListener("input", e => {
+        document.getElementById("years-value").textContent = e.target.value;
+      });
+      document.getElementById("rbase").addEventListener("input", e => {
+        document.getElementById("rbase-value").textContent = e.target.value + "%";
+      });
+      document.getElementById("fuel").addEventListener("input", e => {
+        document.getElementById("fuel-value").textContent = e.target.value + "%";
+      });
+      // Selecionar por defeito os 3 carros
+      setTimeout(() => {
+        const checkboxes = document.querySelectorAll(".car-checkbox");
+        checkboxes.forEach(cb => { if (["Tesla Model Y","VW ID.3","Hyundai Ioniq 5"].includes(cb.value)) cb.checked = true; });
+      }, 100);
+    }
+    window.onload = init;
+  </script>
+</body>
+</html>
