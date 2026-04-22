@@ -190,13 +190,14 @@ function residualAtYear(P, r10, t) {
 }
 
 function simulateCar(car, params, investEnabled) {
-  const {S, R_base, mercRes10, charger, registration, inflation, publicPct, publicKwh, homeRate, grossReturn, CGT, mileage} = params;
+  const {S, R_base, R_fixed, R_variable, mercRes10, charger, registration, inflation, publicPct, publicKwh, homeRate, grossReturn, CGT, mileage} = params;
   const P = car.P;
   const D = Math.max(P + charger + registration - S, 0);
 
   const savings = [0];
   const resDelta = [P - S];
 
+  // Scale only applies to per-km (variable) costs, NOT fixed costs like insurance/IUC
   const scale = mileage / 15000;
 
   for (let t = 1; t <= 10; t++) {
@@ -208,13 +209,19 @@ function simulateCar(car, params, investEnabled) {
 
     // EV energy cost: Wh/km → kWh/yr × blended rate, with degradation scaling
     const evEnergyKwh = car.fuel * (1 + car.degrad * t) / 1000 * mileage;
-    const fuel = evEnergyKwh * blendedRate * infl;
+    const evFuelCost = evEnergyKwh * blendedRate * infl;
 
-    const other = (car.iuc + car.insurance + car.maint * ageEV + car.issues * ageEV) * infl;
-    const evCost = fuel + other;
+    // EV fixed costs (insurance, IUC) — do NOT scale with km
+    const evFixed = (car.iuc + car.insurance) * infl;
+    // EV variable costs (maintenance, repairs) — scale with km
+    const evVariable = (car.maint * ageEV + car.issues * ageEV) * infl * scale;
+    const evCost = evFuelCost + evFixed + evVariable;
 
-    // Current car cost grows with inflation and increasing repair burden
-    const mercCost = R_base * infl * (1 + 0.06 * t) * scale;
+    // Current car: fixed costs (insurance, IUC) stay flat; variable (fuel, maintenance, tyres) scale with km
+    // Repair burden grows with age regardless of km
+    const mercFixed    = R_fixed    * infl;
+    const mercVariable = R_variable * infl * (1 + 0.06 * t) * scale;
+    const mercCost = mercFixed + mercVariable;
 
     savings.push(mercCost - evCost);
     resDelta.push(residualAtYear(P, car.residual10, t) - residualAtYear(S, mercRes10, t));
@@ -313,9 +320,26 @@ function generate() {
   document.getElementById('fuelSubtractNote').style.display = fuelIncluded ? 'block' : 'none';
   document.getElementById('fuelSubtractAmt').textContent = fuelCost.toLocaleString('pt-PT');
 
+  // Split current car costs into fixed (don't scale with km) and variable (do scale)
+  // Fixed = insurance + IUC; Variable = everything else (fuel already excluded via rBaseNet)
+  const useBreakdown = document.getElementById('useBreakdown').checked;
+  let R_fixed, R_variable;
+  if (useBreakdown) {
+    const ins = parseFloat(document.getElementById('currentInsurance').value) || 0;
+    const iuc = parseFloat(document.getElementById('currentIUC').value) || 0;
+    R_fixed   = ins + iuc;
+    R_variable = rBaseNet - R_fixed;
+  } else {
+    // Fallback: assume 30% fixed (insurance/IUC), 70% variable (maintenance, tyres, repairs)
+    R_fixed   = rBaseNet * 0.30;
+    R_variable = rBaseNet * 0.70;
+  }
+
   const params = {
     S: parseFloat(document.getElementById('S').value) || 5000,
     R_base: rBaseNet,
+    R_fixed,
+    R_variable,
     mercRes10: 1200,
     charger: parseFloat(document.getElementById('charger').value) || 1100,
     registration: parseFloat(document.getElementById('registration').value) || 200,
