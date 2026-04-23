@@ -226,7 +226,7 @@ function simulateCar(car, params, investEnabled) {
   }
 
   const alt3 = new Array(11).fill(0);
-  let q = investEnabled ? -D : 0;
+  let q = -D;  // always start negative by net upfront outlay; invest toggle only affects compounding
   alt3[0] = 0;
   for (let t = 1; t <= 10; t++) {
     const ncf = savings[t];
