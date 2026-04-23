@@ -235,34 +235,42 @@ function simulateCar(car, params, investEnabled) {
 
   const alt3 = new Array(11).fill(0);
 
-  // Fix #1: year 0 = -(charger + registration); the car swap itself is net-worth-neutral
-  // (you paid P and gained an asset worth P; you received S and lost an asset worth S)
-  // Only charger and registration are pure costs with no corresponding asset
+  // Fix #1: year 0 = -(charger + registration); car swap itself is net-worth-neutral
   alt3[0] = -(charger + registration);
 
-  // Cash account starts negative by D (drawn from savings to buy EV)
+  // q: cash account, starts at -D (drawn from savings to fund EV purchase)
   let q = -D;
-  // Fix #3: surplus cash tracked separately; invested if toggle is on, otherwise flat offset
-  let surplusPool = investEnabled ? surplus : 0;
+  // costBasisQ: total principal contributed to the investment account.
+  // Starts at D (the initial draw). Each year positive ncf (savings vs baseline) adds to it.
+  let costBasisQ = D;
+
+  // surplusPool: gross value of surplus cash (when old car sale > EV cost).
+  // principalSurplus is the cost basis — contributed once at t=0, never changes.
+  const principalSurplus = surplus;
+  let surplusPool = surplus;
 
   for (let t = 1; t <= 10; t++) {
     const ncf = savings[t];
     if (investEnabled) {
-      // Apply CGT annually on investment gains to avoid year-10 cliff effect.
-      // Each year: the gross return on the current balance accrues, CGT is paid on the
-      // gain portion, then this year's net cash flow (savings) is added.
-      // Net after-tax return = grossReturn * (1 - CGT) on positive balances.
-      const qGain          = q > 0 ? q * grossReturn * CGT : 0;          // tax on q gain
-      const surplusGain    = surplusPool * grossReturn * CGT;             // tax on surplus gain
-      q           = q * (1 + grossReturn) + ncf - qGain;
-      surplusPool = surplusPool * (1 + grossReturn) - surplusGain;
+      // Compound GROSS — CGT does not reduce the compounding base.
+      // Tax only crystallises on sale (display-time deduction below).
+      q = q * (1 + grossReturn) + ncf;
+      if (ncf > 0) costBasisQ += ncf;  // positive savings = new principal contributed
+      surplusPool = surplusPool * (1 + grossReturn);
     } else {
       q += ncf;
-      // surplus stays as flat cash when not investing
     }
 
-    let nw = q + resDelta[t];
-    nw += investEnabled ? surplusPool : surplus;  // add surplus (grown or flat)
+    let nw = q + resDelta[t] + (investEnabled ? surplusPool : surplus);
+
+    if (investEnabled) {
+      // Display-time CGT: "if I sold everything at year t, what tax would I owe?"
+      // q started at -D, so (q + D) is the gross investment value of the q-account.
+      // Gain = gross value − cost basis, floored at 0 (no tax on a loss).
+      const cashGain    = Math.max(0, (q + D) - costBasisQ);
+      const surplusGain = Math.max(0, surplusPool - principalSurplus);
+      nw -= (cashGain + surplusGain) * CGT;
+    }
 
     alt3[t] = Math.round(nw);
   }
